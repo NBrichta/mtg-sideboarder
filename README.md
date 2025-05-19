@@ -14,4 +14,4 @@ The app works through a simple form-based interface which prompts you to paste i
 - Different aesthetic choices for export image
 - Integrate autocomplete cardnames from [MTGJSON](https://mtgjson.com)
 - Save user profiles (login through Google?)
-- 
+- Download in printer-ready autoscaled PDF or SVG format

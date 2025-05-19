@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import io
+import numpy as np
 
 st.set_page_config(page_title="MTG Sideboard Guide", layout="centered")
 st.title("MTG Sideboarder")
@@ -11,28 +12,23 @@ st.header("Paste Your Decklist (MTGO Format)")
 mainboard_text = st.text_area("Mainboard (e.g. 4 Lightning Bolt)", height=200)
 sideboard_text = st.text_area("Sideboard (e.g. 2 Prismatic Ending)", height=100)
 
-if "deck_data" not in st.session_state:
-    st.session_state.deck_data = {}
-if "matchups" not in st.session_state:
-    st.session_state.matchups = []
-if "out_quantities" not in st.session_state:
-    st.session_state.out_quantities = {}
-if "in_quantities" not in st.session_state:
-    st.session_state.in_quantities = {}
-if "confirm_reset" not in st.session_state:
-    st.session_state.confirm_reset = False
-if "search_out" not in st.session_state:
-    st.session_state.search_out = []
-if "search_in" not in st.session_state:
-    st.session_state.search_in = []
-if "opponent_name" not in st.session_state:
-    st.session_state.opponent_name = ""
-if "confirm_add" not in st.session_state:
-    st.session_state.confirm_add = False
-if "clear_fields" not in st.session_state:
-    st.session_state.clear_fields = False
+# Session state initialization
+for key, default in [
+    ("deck_data", {}),
+    ("matchups", []),
+    ("out_quantities", {}),
+    ("in_quantities", {}),
+    ("confirm_reset", False),
+    ("search_out", []),
+    ("search_in", []),
+    ("opponent_name", ""),
+    ("confirm_add", False),
+    ("clear_fields", False),
+    ("card_labels", {}),
+]:
+    if key not in st.session_state:
+        st.session_state[key] = default
 
-# Helper function to parse pasted deck
 @st.cache_data
 def parse_decklist(deck_text):
     deck = {}
@@ -44,11 +40,18 @@ def parse_decklist(deck_text):
             continue
     return deck
 
+# Submit Decklist and apply internal keys
 if st.button("Submit Deck"):
-    st.session_state.deck_data = {
-        "mainboard": parse_decklist(mainboard_text),
-        "sideboard": parse_decklist(sideboard_text)
-    }
+    main_raw = parse_decklist(mainboard_text)
+    side_raw = parse_decklist(sideboard_text)
+
+    mainboard = {f"MB:{name}": qty for name, qty in main_raw.items()}
+    sideboard = {f"SB:{name}": qty for name, qty in side_raw.items()}
+
+    labels = {**{k: k[3:] for k in mainboard}, **{k: k[3:] for k in sideboard}}
+
+    st.session_state.deck_data = {"mainboard": mainboard, "sideboard": sideboard}
+    st.session_state.card_labels = labels
     st.success("Decklist saved!")
     st.session_state.out_quantities = {}
     st.session_state.in_quantities = {}
@@ -68,15 +71,35 @@ if st.session_state.deck_data:
     st.session_state.opponent_name = st.text_input("Opposing Deck Name", value=st.session_state.opponent_name)
 
     st.subheader("Search card(s) to take OUT")
-    st.multiselect("Search (mainboard):", list(st.session_state.deck_data["mainboard"].keys()), key="search_out")
+    st.multiselect(
+        "Search (mainboard):",
+        options=list(st.session_state.deck_data["mainboard"].keys()),
+        format_func=lambda k: st.session_state.card_labels.get(k, k),
+        key="search_out"
+    )
     for card in st.session_state.search_out:
-        qty = st.number_input(f"Quantity to take out: {card}", min_value=1, max_value=st.session_state.deck_data["mainboard"][card], key=f"qty_out_{card}")
+        qty = st.number_input(
+            f"Quantity to take out: {st.session_state.card_labels[card]}",
+            min_value=1,
+            max_value=st.session_state.deck_data["mainboard"][card],
+            key=f"qty_out_{card}"
+        )
         st.session_state.out_quantities[card] = qty
 
     st.subheader("Search card(s) to bring IN:")
-    st.multiselect("Search (sideboard):", list(st.session_state.deck_data["sideboard"].keys()), key="search_in")
+    st.multiselect(
+        "Search (sideboard):",
+        options=list(st.session_state.deck_data["sideboard"].keys()),
+        format_func=lambda k: st.session_state.card_labels.get(k, k),
+        key="search_in"
+    )
     for card in st.session_state.search_in:
-        qty = st.number_input(f"Quantity to bring in: {card}", min_value=1, max_value=st.session_state.deck_data["sideboard"][card], key=f"qty_in_{card}")
+        qty = st.number_input(
+            f"Quantity to bring in: {st.session_state.card_labels[card]}",
+            min_value=1,
+            max_value=st.session_state.deck_data["sideboard"][card],
+            key=f"qty_in_{card}"
+        )
         st.session_state.in_quantities[card] = qty
 
     if not st.session_state.confirm_add:
@@ -115,14 +138,14 @@ if st.session_state.matchups:
     sideboard = sorted(st.session_state.deck_data.get("sideboard", {}).keys())
     ordered_columns = [col for col in mainboard if col in df.columns] + [col for col in sideboard if col in df.columns]
     df = df[ordered_columns][::-1]
-    df = df.loc[:, (df != "").any(axis=0)]  # Keep only columns with at least one non-empty value
-    st.dataframe(df.fillna(""))
+    df = df.loc[:, (df != "").any(axis=0)]
+
+    pretty_df = df.rename(columns=st.session_state.card_labels)
+    st.dataframe(pretty_df.fillna(""))
 
     # Step 4: Export to PNG
     if st.button("Download Options"):
-        import numpy as np
-
-        df_export = df[::-1].copy()  # Already ordered by grouped main/side
+        df_export = df[::-1].copy()
         matrix = np.empty(df_export.shape, dtype=object)
         color_matrix = np.full(df_export.shape, '', dtype=object)
 
@@ -132,15 +155,15 @@ if st.session_state.matchups:
                 if isinstance(val, str):
                     if val.startswith('+'):
                         matrix[i, j] = val[1:]
-                        color_matrix[i, j] = '#b7e4c7'  # green
+                        color_matrix[i, j] = '#b7e4c7'
                     elif val.startswith('-'):
                         matrix[i, j] = val[1:]
-                        color_matrix[i, j] = '#f4cccc'  # red
+                        color_matrix[i, j] = '#f4cccc'
                     else:
                         matrix[i, j] = ''
 
         fontsize = 12
-        cell_size = fontsize * 0.15  # approx scaling factor for spacing
+        cell_size = fontsize * 0.1
         fig_width = df.shape[1] * cell_size
         fig_height = df.shape[0] * cell_size
         fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=300)
@@ -154,7 +177,7 @@ if st.session_state.matchups:
                     ax.text(j + 0.5, matrix.shape[0] - i - 0.5, matrix[i, j], ha="center", va="center", fontsize=fontsize)
 
         ax.set_xticks(np.arange(len(df.columns)) + 0.5)
-        ax.set_xticklabels(df.columns, rotation=45, ha="right", fontsize=9)
+        ax.set_xticklabels([st.session_state.card_labels.get(col, col) for col in df.columns], rotation=45, ha="right", fontsize=9)
         ax.set_yticks(np.arange(len(df.index)) + 0.5)
         ax.set_yticklabels(df.index[::-1], fontsize=10)
 
@@ -178,7 +201,7 @@ if st.session_state.matchups:
 
     st.markdown("<br><hr><br>", unsafe_allow_html=True)
     if not st.session_state.confirm_reset:
-        if st.button("🔄 Hard Reset All Data", key="reset_confirm_button"):
+        if st.button("Hard Reset All Data", key="reset_confirm_button"):
             st.session_state.confirm_reset = True
     else:
         st.warning("This will clear all session data. Are you sure?")

@@ -4,10 +4,10 @@ import matplotlib.pyplot as plt
 import io
 
 st.set_page_config(page_title="MTG Sideboard Guide", layout="wide")
-st.title("MTG Sideboard Guide Generator")
+st.title("MTG Sideboarder")
 
 # Step 1: Deck Input
-st.header("1. Paste Your Deck")
+st.header("1. Paste Your Decklist (MTGO Format)")
 mainboard_text = st.text_area("Mainboard (e.g. 4 Lightning Bolt)", height=200)
 sideboard_text = st.text_area("Sideboard (e.g. 2 Prismatic Ending)", height=100)
 
@@ -33,17 +33,17 @@ if st.button("Submit Deck"):
         "mainboard": parse_decklist(mainboard_text),
         "sideboard": parse_decklist(sideboard_text)
     }
-    st.success("Deck submitted! Now add matchups.")
+    st.success("Decklist saved! Now add matchups.")
 
 # Step 2: Matchup Entry
 if st.session_state.deck_data:
-    st.header("2. Add Matchup Guide")
-    opponent_name = st.text_input("Opponent Deck Name")
+    st.header("2. Add Matchup")
+    opponent_name = st.text_input("Opposing Deck Name")
 
-    st.subheader("Select cards to take OUT (from mainboard):")
+    st.subheader("Select cards to take OUT of mainboard:")
     outs = st.multiselect("Out:", list(st.session_state.deck_data["mainboard"].keys()))
 
-    st.subheader("Select cards to bring IN (from sideboard):")
+    st.subheader("Select cards to bring IN from sideboard:")
     ins = st.multiselect("In:", list(st.session_state.deck_data["sideboard"].keys()))
 
     if st.button("Add Matchup") and opponent_name:

@@ -111,20 +111,65 @@ if st.session_state.deck_data:
 if st.session_state.matchups:
     st.header("Sideboard Matrix Preview")
     df = pd.DataFrame(st.session_state.matchups).set_index("Matchup")
+    mainboard = sorted(st.session_state.deck_data.get("mainboard", {}).keys())
+    sideboard = sorted(st.session_state.deck_data.get("sideboard", {}).keys())
+    ordered_columns = [col for col in mainboard if col in df.columns] + [col for col in sideboard if col in df.columns]
+    df = df[ordered_columns][::-1]
     df = df.loc[:, (df != "").any(axis=0)]  # Keep only columns with at least one non-empty value
     st.dataframe(df.fillna(""))
 
     # Step 4: Export to PNG
     if st.button("Download Options"):
-        fig, ax = plt.subplots(figsize=(len(df.columns) * 0.5 + 2, len(df.index) * 0.5 + 1))
-        ax.axis("off")
-        table = ax.table(cellText=df.fillna("").values,
-                 rowLabels=df.index.tolist(),
-                 colLabels=df.columns.tolist(),
-                 cellLoc='center', loc='center')
-        table.auto_set_font_size(False)
-        table.set_fontsize(10)
-        table.scale(1.2, 1.2)
+        import numpy as np
+
+        df_export = df[::-1].copy()  # Already ordered by grouped main/side
+        matrix = np.empty(df_export.shape, dtype=object)
+        color_matrix = np.full(df_export.shape, '', dtype=object)
+
+        for i in range(df_export.shape[0]):
+            for j in range(df_export.shape[1]):
+                val = df_export.iloc[i, j]
+                if isinstance(val, str):
+                    if val.startswith('+'):
+                        matrix[i, j] = val[1:]
+                        color_matrix[i, j] = '#b7e4c7'  # green
+                    elif val.startswith('-'):
+                        matrix[i, j] = val[1:]
+                        color_matrix[i, j] = '#f4cccc'  # red
+                    else:
+                        matrix[i, j] = ''
+
+        fontsize = 12
+        cell_size = fontsize * 0.15  # approx scaling factor for spacing
+        fig_width = df.shape[1] * cell_size
+        fig_height = df.shape[0] * cell_size
+        fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=300)
+        ax.set_xlim(0, matrix.shape[1])
+        ax.set_ylim(0, matrix.shape[0])
+
+        for i in range(matrix.shape[0]):
+            for j in range(matrix.shape[1]):
+                if matrix[i, j] != '' and color_matrix[i, j] != '':
+                    ax.add_patch(plt.Rectangle((j, matrix.shape[0] - i - 1), 1, 1, color=color_matrix[i, j]))
+                    ax.text(j + 0.5, matrix.shape[0] - i - 0.5, matrix[i, j], ha="center", va="center", fontsize=fontsize)
+
+        ax.set_xticks(np.arange(len(df.columns)) + 0.5)
+        ax.set_xticklabels(df.columns, rotation=45, ha="right", fontsize=9)
+        ax.set_yticks(np.arange(len(df.index)) + 0.5)
+        ax.set_yticklabels(df.index[::-1], fontsize=10)
+
+        ax.set_title("Sideboard Guide", fontsize=14)
+        ax.tick_params(left=True, bottom=True)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+        ax.set_xticks(np.arange(matrix.shape[1]), minor=True)
+        ax.set_yticks(np.arange(matrix.shape[0]), minor=True)
+        ax.grid(which='minor', color='black', linestyle='-', linewidth=1)
+        ax.tick_params(which='minor', size=0)
+
+        ax.invert_yaxis()
+        plt.tight_layout()
 
         buf = io.BytesIO()
         plt.savefig(buf, format='png', bbox_inches='tight')

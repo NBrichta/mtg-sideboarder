@@ -3,14 +3,25 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import io
 import numpy as np
+import requests
 
 st.set_page_config(page_title="MTG Sideboard Guide", layout="centered")
 st.title("MTG Sideboarder")
+"""
+A lightweight web app for designing and exporting Magic: The Gathering sideboard guides.
 
-# Step 1: Deck Input
-st.header("Paste Your Decklist (MTGO Format)")
-mainboard_text = st.text_area("Mainboard (e.g. 4 Lightning Bolt)", height=200)
-sideboard_text = st.text_area("Sideboard (e.g. 2 Prismatic Ending)", height=100)
+Built using Python 3.1 and Streamlit.
+
+Links:   [![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=flat&logo=github&logoColor=white)](https://github.com/NBrichta/mtg-sideboarder)[![Ko-Fi](https://img.shields.io/badge/Ko--fi-F16061?style=flat&logo=ko-fi&logoColor=white)](https://ko-fi.com/sideboarder)
+"""
+
+#=========== Step 1: Deck Input
+st.header("Import Decklist", divider="grey", help="Your decklist data **must** be in MTGO formatting for this to work properly. In the future, importing decklists from URLs is a high priority once I figure out how APIs work.")
+"""
+This section lets you import your decklist in standard MTGO format. Once you click **"Submit Deck"**, the cards will automatically be parsed into mainboard and sideboard libraries for the search bars in the next section.
+"""
+mainboard_text = st.text_area("Mainboard", height=200, placeholder="4 Amulet of Vigor\n4 Primeval Titan\n3 Scapeshift\n2 Lotus Field\netc.")
+sideboard_text = st.text_area("Sideboard", height=100, placeholder="1 Boseiju, Who Endures\n2 Dismember\netc.")
 
 # Session state initialization
 for key, default in [
@@ -52,13 +63,16 @@ if st.button("Submit Deck"):
 
     st.session_state.deck_data = {"mainboard": mainboard, "sideboard": sideboard}
     st.session_state.card_labels = labels
-    st.success("Decklist saved!")
+    st.success("Decklist saved.")
     st.session_state.out_quantities = {}
     st.session_state.in_quantities = {}
 
-# Step 2: Matchup Entry
+#============= Step 2: Matchup Entry
 if st.session_state.deck_data:
-    st.header("Add Matchup Info")
+    st.header("Add Matchup Info", divider="grey")
+    """
+    In this section, you first define a name for the archetype you are sideboarding for, then search the cards you would like to remove from your mainboard and the cards you would like to add in from your sideboard. Then click **"Add Matchup>Confirm"** to add your choices to your sideboard guide.
+    """
 
     if st.session_state.clear_fields:
         st.session_state.search_out = []
@@ -68,11 +82,11 @@ if st.session_state.deck_data:
         st.session_state.in_quantities = {}
         st.session_state.clear_fields = False
 
-    st.session_state.opponent_name = st.text_input("Opposing Deck Name", value=st.session_state.opponent_name)
+    st.session_state.opponent_name = st.text_input("Opposing Archetype Name", value=st.session_state.opponent_name)
 
-    st.subheader("Search card(s) to take OUT")
+    st.subheader("Card(s) to take :red[OUT]:")
     st.multiselect(
-        "Search (mainboard):",
+        "Search:",
         options=list(st.session_state.deck_data["mainboard"].keys()),
         format_func=lambda k: st.session_state.card_labels.get(k, k),
         key="search_out"
@@ -86,9 +100,9 @@ if st.session_state.deck_data:
         )
         st.session_state.out_quantities[card] = qty
 
-    st.subheader("Search card(s) to bring IN:")
+    st.subheader("Card(s) to bring :green[IN]:")
     st.multiselect(
-        "Search (sideboard):",
+        "Search:",
         options=list(st.session_state.deck_data["sideboard"].keys()),
         format_func=lambda k: st.session_state.card_labels.get(k, k),
         key="search_in"
@@ -103,9 +117,12 @@ if st.session_state.deck_data:
         st.session_state.in_quantities[card] = qty
 
     if not st.session_state.confirm_add:
-        if st.button("Add Matchup") and st.session_state.opponent_name:
-            st.session_state.confirm_add = True
-            st.rerun()
+        if st.button("Add Matchup"):
+            if st.session_state.opponent_name.strip() == "":
+                st.warning("Please enter an opposing archetype name before adding a matchup.")
+            else:
+                st.session_state.confirm_add = True
+                st.rerun()
     else:
         st.warning("Click 'Confirm Add' to submit, or 'Cancel' to undo. Confirming will clear all entry fields.")
         col1, col2 = st.columns(2)
@@ -130,9 +147,12 @@ if st.session_state.deck_data:
                 st.session_state.confirm_add = False
                 st.rerun()
 
-# Step 3: Matchup Matrix Preview
+#========== Step 3: Matchup Matrix Preview
 if st.session_state.matchups:
     st.header("Sideboard Matrix Preview")
+    """
+    This section displays a sorted preview of your added matchups so far, with the most recent at the top. Once you are satisfied, click **"Download Options"** to specify the format you want the output to be in.
+    """
     df = pd.DataFrame(st.session_state.matchups).set_index("Matchup")
     mainboard = sorted(st.session_state.deck_data.get("mainboard", {}).keys())
     sideboard = sorted(st.session_state.deck_data.get("sideboard", {}).keys())
@@ -141,7 +161,7 @@ if st.session_state.matchups:
     df = df.loc[:, (df != "").any(axis=0)]
 
     pretty_df = df.rename(columns=st.session_state.card_labels)
-    st.dataframe(pretty_df.fillna(""))
+    st.dataframe(pretty_df.fillna(""), on_select="ignore")
 
     # Step 4: Export to PNG
     if st.button("Download Options"):
@@ -200,8 +220,11 @@ if st.session_state.matchups:
         plt.close(fig)
 
     st.markdown("<br><hr><br>", unsafe_allow_html=True)
+    
+    
+    "💔 Help, I've made a huge mistake!"
     if not st.session_state.confirm_reset:
-        if st.button("Hard Reset All Data", key="reset_confirm_button"):
+        if st.button(":red[Hard Reset All Data]", key="reset_confirm_button"):
             st.session_state.confirm_reset = True
     else:
         st.warning("This will clear all session data. Are you sure?")
@@ -213,3 +236,27 @@ if st.session_state.matchups:
         with col2:
             if st.button("Cancel", key="confirm_reset_cancel"):
                 st.session_state.confirm_reset = False
+
+# Bug Report Section in Sidebar
+with st.sidebar.expander("👾 Submit a Bug Report"):
+    st.markdown("This is my first attempt at building a web app, so there may be issues I haven't anticipated. If something isn't working as expected, please describe the issue below.")
+    bug_text = st.text_area("Describe the bug:", height=150)
+    include_session = st.checkbox("Include session state (decklist and matchup details)", value=True)
+    send_report = st.button("Submit Report")
+
+    if send_report:
+        report_text = bug_text
+        if include_session:
+            report_text += f"\n---\nDeck: {st.session_state.get('deck_data')}\nMatchups: {st.session_state.get('matchups')}"
+
+        form_url = "https://docs.google.com/forms/d/e/1FAIpQLSe3VRA_G7MRTM0PHKlErHYMlH3YxTmiL_GuQrw0WaUSwxle4Q/formResponse"
+        form_data = {
+            "entry.1096092479": bug_text,
+            "entry.258759295": report_text
+        }
+
+        try:
+            requests.post(form_url, data=form_data)
+            st.success("Bug report submitted. Thank you!!")
+        except Exception as e:
+            st.error(f"Failed to submit bug report: {e}. Please create an issue on [GitHub](https://github.com/NBrichta/mtg-sideboarder) and I'll try to address it as soon as I can.")

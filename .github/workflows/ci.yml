@@ -12,15 +12,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+
+      - name: Setup Miniconda & create env
+        uses: conda-incubator/setup-miniconda@v2
         with:
           python-version: '3.10'
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install black flake8 pytest
+          environment-file: environment.yml
+          activate-environment: sideboarder_env
+          auto-update-conda: true
+
       - name: Lint with black
-        run: black --check .
+        run: conda run -n sideboarder_env black --check .
+
+      - name: Lint with flake8
+        run: conda run -n sideboarder_env flake8 .
+
       - name: Run tests
-        run: PYTHONPATH=$PWD pytest --maxfail=1 --disable-warnings -q
+        run: conda run -n sideboarder_env pytest --maxfail=1 --disable-warnings -q
+
+

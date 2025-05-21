@@ -6,7 +6,48 @@ import numpy as np
 import requests
 
 
-# === Utility Functions ===
+# === DEV MODE OPTIONS ===
+def get_matchups_from_ui():
+    st.header("Enter your matchups")
+    num = st.number_input("How many matchups?", min_value=1, max_value=8, value=2)
+    matchups = []
+    for i in range(num):
+        col1, col2, col3 = st.columns([2, 3, 3])
+        with col1:
+            opp = st.text_input(f"Opponent {i+1}", key=f"opp_{i}")
+        with col2:
+            ins = st.text_area(
+                f"Cards IN vs {i+1}", placeholder="comma-separated", key=f"in_{i}"
+            )
+        with col3:
+            outs = st.text_area(
+                f"Cards OUT vs {i+1}", placeholder="comma-separated", key=f"out_{i}"
+            )
+        ins_list = [c.strip() for c in ins.split(",") if c.strip()]
+        outs_list = [c.strip() for c in outs.split(",") if c.strip()]
+        matchups.append({"opponent": opp, "ins": ins_list, "outs": outs_list})
+    return matchups
+
+
+def get_dummy_matchups():
+    return [
+        {
+            "opponent": "Mono‐Green Stompy",
+            "ins": ["Path to Exile", "Leyline of Sanctity"],
+            "outs": ["Wild Growth", "Llanowar Elves"],
+        },
+        {
+            "opponent": "Burn",
+            "ins": ["Eidolon of the Great Revel"],
+            "outs": ["Goblin Guide", "Lightning Bolt"],
+        },
+    ]
+
+
+# ========================
+
+
+# === Decklist Parser ===
 @st.cache_data(show_spinner=False)
 def parse_decklist(deck_text: str) -> dict[str, int]:
     """Parse MTGO‐style decklist into {card_name: quantity}."""
@@ -20,6 +61,118 @@ def parse_decklist(deck_text: str) -> dict[str, int]:
     return deck
 
 
+# ========================
+
+
+# === Matchup Entry ===
+def render_matchup_entry():
+    # only run if deck_data exists
+    if st.session_state.deck_data:
+        st.header("Add Matchup Info")
+        st.markdown(
+            """
+    <hr style="
+      border: 2px solid #AF5D63;
+      width: 100%;
+      margin: 0 0 1em 0;
+    ">
+    """,
+            unsafe_allow_html=True,
+        )
+        """
+        In this section, you first define a name for the archetype you are sideboarding for,
+        then search the cards you would like to remove from your mainboard and the cards
+        you would like to add in from your sideboard. Then click **"Add Matchup>Confirm"**
+        to add your choices to your sideboard guide.
+        """
+
+        # clear form fields if flagged
+        if st.session_state.clear_fields:
+            st.session_state.search_out = []
+            st.session_state.search_in = []
+            st.session_state.opponent_name = ""
+            st.session_state.out_quantities = {}
+            st.session_state.in_quantities = {}
+            st.session_state.clear_fields = False
+
+        # opponent name
+        st.session_state.opponent_name = st.text_input(
+            "Opposing Archetype Name",
+            value=st.session_state.opponent_name,
+            placeholder="e.g. Boros Energy",
+        )
+
+        # OUT cards
+        st.subheader("Card(s) to take :red[OUT]:")
+        st.multiselect(
+            "Search:",
+            options=list(st.session_state.deck_data["mainboard"].keys()),
+            format_func=lambda k: st.session_state.card_labels.get(k, k),
+            key="search_out",
+        )
+        for card in st.session_state.search_out:
+            qty = st.number_input(
+                f"Quantity to take out: {st.session_state.card_labels[card]}",
+                min_value=1,
+                max_value=st.session_state.deck_data["mainboard"][card],
+                key=f"qty_out_{card}",
+            )
+            st.session_state.out_quantities[card] = qty
+
+        # IN cards
+        st.subheader("Card(s) to bring :green[IN]:")
+        st.multiselect(
+            "Search:",
+            options=list(st.session_state.deck_data["sideboard"].keys()),
+            format_func=lambda k: st.session_state.card_labels.get(k, k),
+            key="search_in",
+        )
+        for card in st.session_state.search_in:
+            qty = st.number_input(
+                f"Quantity to bring in: {st.session_state.card_labels[card]}",
+                min_value=1,
+                max_value=st.session_state.deck_data["sideboard"][card],
+                key=f"qty_in_{card}",
+            )
+            st.session_state.in_quantities[card] = qty
+
+        # Add / confirm buttons
+        if not st.session_state.confirm_add:
+            if st.button("Add Matchup"):
+                if st.session_state.opponent_name.strip() == "":
+                    st.warning("Please enter an opposing archetype name.")
+                else:
+                    st.session_state.confirm_add = True
+                    st.rerun()
+        else:
+            st.warning("Click Confirm to finalize or Cancel to undo.")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Confirm"):
+                    used_cards = set(st.session_state.out_quantities) | set(
+                        st.session_state.in_quantities
+                    )
+                    matchup_row = {card: "" for card in used_cards}
+                    for card, qty in st.session_state.out_quantities.items():
+                        matchup_row[card] = f"-{qty}"
+                    for card, qty in st.session_state.in_quantities.items():
+                        matchup_row[card] = f"+{qty}"
+                    matchup_row["Matchup"] = st.session_state.opponent_name
+                    st.session_state.matchups.append(matchup_row)
+                    st.success(f"Matchup '{st.session_state.opponent_name}' added!")
+                    st.session_state.clear_fields = True
+                    st.session_state.confirm_add = False
+                    st.rerun()
+            with col2:
+                if st.button("Cancel"):
+                    st.session_state.confirm_add = False
+                    st.rerun()
+
+
+# ========================
+
+
+# === Render Export ===
 @st.cache_data(show_spinner=False)
 def render_matrix_figure(df: pd.DataFrame, card_labels: dict[str, str]) -> plt.Figure:
     """
@@ -102,6 +255,10 @@ def render_matrix_figure(df: pd.DataFrame, card_labels: dict[str, str]) -> plt.F
     return fig
 
 
+# ========================
+
+
+# === Bug Reporting ===
 def submit_bug_report(bug_text, include_session):
     report_text = bug_text
     if include_session:
@@ -119,6 +276,10 @@ def submit_bug_report(bug_text, include_session):
         )
 
 
+# ========================
+
+
+# === Reset Button ===
 def render_hard_reset_button():
     st.sidebar.markdown("💔 Help, I've made a huge mistake!")
 
@@ -137,3 +298,6 @@ def render_hard_reset_button():
             if st.button("Cancel", key="confirm_reset_cancel"):
                 st.session_state.confirm_reset = False
                 st.rerun()
+
+
+# ========================

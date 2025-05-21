@@ -5,16 +5,20 @@ import io
 import numpy as np
 import sideboarder_modular as sb_mod
 
+# ─────── DEVELOPMENT TOGGLE ───────
+USE_DUMMY_MATCHUPS = False
+# ───────────────────────────────────
+
 
 st.set_page_config(
     page_title="MTG Sideboard Guide",
     page_icon="./icon.ico",
-    layout="wide",
-    initial_sidebar_state="collapsed",
+    layout="centered",
+    initial_sidebar_state="auto",
     menu_items={
-        "Get Help": "https://www.extremelycoolapp.com/help",
-        "Report a bug": "https://www.extremelycoolapp.com/bug",
-        "About": "# This is a header. This is an *extremely* cool app!",
+        "Get Help": "https://github.com/NBrichta/mtg-sideboarder",
+        "Report a bug": "https://github.com/NBrichta/mtg-sideboarder/issues",
+        "About": "MTG Sideboarder is a passion project borne out of frustration with tedious Excel spreadsheets and a desire to help the competitive MTG community. I cannot express how thankful I am to everyone who has supported its development.",
     },
 )
 
@@ -37,25 +41,39 @@ st.markdown(
 
 
 st.title("MTG Sideboarder")
-st.markdown("""
-A lightweight web app for designing and exporting Magic: The Gathering sideboard guides.
+
+st.markdown(
+    """
+A lightweight UI for designing and exporting Magic: The Gathering sideboard guides.
 
 Follow the steps below to get started!
-""")
+"""
+)
 
 # =========== Step 1: Deck Input
 st.header(
     "Import Decklist",
-    divider="grey",
     help="Your decklist data **must** be in MTGO formatting for this to work properly. In the future, importing decklists from URLs is a high priority once I figure out how APIs work.",
 )
+
+st.markdown(
+    """
+    <hr style="
+      border: 2px solid #AF5D63;
+      width: 100%;
+      margin: 0 0 1em 0;
+    ">
+    """,
+    unsafe_allow_html=True,
+)
+
 """
 This section lets you import your decklist in standard MTGO format. Once you click **"Submit Deck"**, the cards will automatically be parsed into mainboard and sideboard libraries for the search bars in the next section.
 """
 
 decklist_text = st.text_input(
     "Your Decklist Name",
-    placeholder="This is optional. If left blank, the exported guide will be untitled.",
+    placeholder="Optional. If left blank, the exported guide will be untitled.",
 )
 mainboard_text = st.text_area(
     "Mainboard",
@@ -83,6 +101,10 @@ default_session = {
 for key, default in default_session.items():
     st.session_state.setdefault(key, default)
 
+# If dev-mode, and you’ve already submitted a deck, load dummy matchups now
+if USE_DUMMY_MATCHUPS and st.session_state.deck_data:
+    st.session_state.matchups = sb_mod.get_dummy_matchups()
+
 # Submit deck
 if st.button("Submit Deck"):
     main_raw = sb_mod.parse_decklist(mainboard_text)
@@ -97,95 +119,17 @@ if st.button("Submit Deck"):
     st.session_state.out_quantities = {}
     st.session_state.in_quantities = {}
 
-# ============= Step 2: Matchup Entry
-if st.session_state.deck_data:
-    st.header("Add Matchup Info", divider="grey")
-    """
-    In this section, you first define a name for the archetype you are sideboarding for, then search the cards you would like to remove from your mainboard and the cards you would like to add in from your sideboard. Then click **"Add Matchup>Confirm"** to add your choices to your sideboard guide.
-    """
+# ============= Step 2: Matchup Entry (skipped in DEV mode)
 
-    if st.session_state.clear_fields:
-        st.session_state.search_out = []
-        st.session_state.search_in = []
-        st.session_state.opponent_name = ""
-        st.session_state.out_quantities = {}
-        st.session_state.in_quantities = {}
-        st.session_state.clear_fields = False
-
-    st.session_state.opponent_name = st.text_input(
-        "Opposing Archetype Name",
-        value=st.session_state.opponent_name,
-        placeholder="e.g. Boros Energy",
-    )
-
-    st.subheader("Card(s) to take :red[OUT]:")
-    st.multiselect(
-        "Search:",
-        options=list(st.session_state.deck_data["mainboard"].keys()),
-        format_func=lambda k: st.session_state.card_labels.get(k, k),
-        key="search_out",
-    )
-    for card in st.session_state.search_out:
-        qty = st.number_input(
-            f"Quantity to take out: {st.session_state.card_labels[card]}",
-            min_value=1,
-            max_value=st.session_state.deck_data["mainboard"][card],
-            key=f"qty_out_{card}",
-        )
-        st.session_state.out_quantities[card] = qty
-
-    st.subheader("Card(s) to bring :green[IN]:")
-    st.multiselect(
-        "Search:",
-        options=list(st.session_state.deck_data["sideboard"].keys()),
-        format_func=lambda k: st.session_state.card_labels.get(k, k),
-        key="search_in",
-    )
-    for card in st.session_state.search_in:
-        qty = st.number_input(
-            f"Quantity to bring in: {st.session_state.card_labels[card]}",
-            min_value=1,
-            max_value=st.session_state.deck_data["sideboard"][card],
-            key=f"qty_in_{card}",
-        )
-        st.session_state.in_quantities[card] = qty
-
-    if not st.session_state.confirm_add:
-        if st.button("Add Matchup"):
-            if st.session_state.opponent_name.strip() == "":
-                st.warning("Please enter an opposing archetype name.")
-            else:
-                st.session_state.confirm_add = True
-                st.rerun()
-    else:
-        st.warning("Click Confirm to finalize or Cancel to undo.")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Confirm"):
-                used_cards = set(st.session_state.out_quantities) | set(
-                    st.session_state.in_quantities
-                )
-                matchup_row = {card: "" for card in used_cards}
-                for card, qty in st.session_state.out_quantities.items():
-                    matchup_row[card] = f"-{qty}"
-                for card, qty in st.session_state.in_quantities.items():
-                    matchup_row[card] = f"+{qty}"
-                matchup_row["Matchup"] = st.session_state.opponent_name
-                st.session_state.matchups.append(matchup_row)
-                st.success(f"Matchup '{st.session_state.opponent_name}' added!")
-                st.session_state.clear_fields = True
-                st.session_state.confirm_add = False
-                st.rerun()
-        with col2:
-            if st.button("Cancel"):
-                st.session_state.confirm_add = False
-                st.rerun()
+# only show the UI if you’re *not* using dummy data:
+if not USE_DUMMY_MATCHUPS:
+    sb_mod.render_matchup_entry()
 
 # Matrix preview
 if st.session_state.matchups:
     st.header("Sideboard Matrix Preview")
     """
-    This section displays a sorted preview of your added matchups so far, with the most recent at the top. Once you are satisfied, click **"Download Options"** to specify the format you want the output to be in.
+    This section displays a sorted preview of your added matchups so far, with the most recent at the top. Once you are satisfied, click **"Download options"** to specify the format and size you want the output to be in.
     """
     df = pd.DataFrame(st.session_state.matchups).set_index("Matchup")
     mainboard = sorted(st.session_state.deck_data.get("mainboard", {}).keys())
@@ -240,7 +184,7 @@ st.sidebar.markdown("---")
 # Bug report
 with st.sidebar.expander("🐛🖥️ &emsp; Submit a Bug Report"):
     bug_text = st.text_area(
-        "This is my first attempt at building a web app so there are bound to be issues. Please describe the sequence of events that led to the error as best as you can:",
+        "This is my first attempt at building a web app so there are bound to be issues. Please describe the sequence of events that led to the error as best as you can here, or create an issue thread on the [GitHub](https://github.com/NBrichta/mtg-sideboarder/issues):",
         height=150,
     )
     include_session = st.checkbox(
@@ -249,8 +193,6 @@ with st.sidebar.expander("🐛🖥️ &emsp; Submit a Bug Report"):
     if st.button("Submit Report"):
         sb_mod.submit_bug_report(bug_text, include_session)
 
-# Divider
-st.sidebar.markdown("---")
 
 # Hard reset functionality
 sb_mod.render_hard_reset_button()

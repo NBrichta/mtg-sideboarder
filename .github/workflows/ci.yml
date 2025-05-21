@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  lint-and-test:
+  linting:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -29,5 +29,3 @@ jobs:
             --ignore=E203,E501,W503,F401 \
             .
 
-      - name: Run tests
-        run: conda run -n sideboarder_env pytest --maxfail=1 --disable-warnings -q

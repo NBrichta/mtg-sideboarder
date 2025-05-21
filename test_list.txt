@@ -1,40 +1,28 @@
-1 Aftermath Analyst
-4 Amulet of Vigor
-4 Arboreal Grazer
-3 Boseiju, Who Endures
-4 Crumbling Vestige
-1 Cultivator Colossus
-1 Echoing Deeps
-3 Forest
-3 Gruul Turf
-1 Hanweir Battlements
-2 Lotus Field
-4 Malevolent Rumble
-1 Mirrorpool
-1 Otawara, Soaring City
-4 Primeval Titan
-3 Scapeshift
-1 Shifting Woodland
-4 Simic Growth Chamber
-4 Spelunking
-3 Summoner's Pact
-1 The Mycosynth Gardens
-1 Tolaria West
-1 Urza's Cave
+1 Arid Mesa
+4 Bloodstained Mire
+4 Cori-Steel Cutter
+4 Dragon's Rage Channeler
+4 Experimental Synthesizer
+4 Galvanic Blast
+4 Lightning Bolt
+4 Mishra's Bauble
+4 Monastery Swiftspear
+3 Mountain
+4 Mox Opal
+1 Pyrite Spellbomb
+4 Ragavan, Nimble Pilferer
+2 Sacred Foundry
+2 Scalding Tarn
+1 Shadowspear
+3 Shrapnel Blast
+2 Steam Vents
 4 Urza's Saga
-1 Vesuva
+1 Wooded Foothills
 
-1 Bojuka Bog
-1 Boseiju, Who Endures
-2 Collector Ouphe
-2 Dismember
-1 Otawara, Soaring City
-1 Pyroclasm
-1 Six
-1 Snow-Covered Forest
-3 Tireless Tracker
-2 Vampires' Vengeance
-
-
-
-https://docs.google.com/forms/d/e/1FAIpQLSe3VRA_G7MRTM0PHKlErHYMlH3YxTmiL_GuQrw0WaUSwxle4Q/viewform?usp=pp_url&entry.1096092479=test&entry.258759295=test
+3 Chained to the Rocks
+3 Consign to Memory
+1 Pithing Needle
+4 Prismatic Ending
+1 Soul-Guide Lantern
+2 Surgical Extraction
+1 Tormod's Crypt

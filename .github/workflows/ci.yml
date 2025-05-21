@@ -23,4 +23,4 @@ jobs:
       - name: Lint with black
         run: black --check .
       - name: Run tests
-        run: pytest --maxfail=1 --disable-warnings -q
+        run: PYTHONPATH=$PWD pytest --maxfail=1 --disable-warnings -q

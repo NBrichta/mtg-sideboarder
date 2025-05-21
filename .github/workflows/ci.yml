@@ -26,8 +26,7 @@ jobs:
       - name: Lint with flake8
         run: |
           conda run -n sideboarder_env flake8 \
-            --max-line-length=88 \
-            --ignore=F401 \
+            --ignore=E203,E501,W503,F401 \
             .
 
       - name: Run tests

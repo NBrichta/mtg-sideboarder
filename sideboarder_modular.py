@@ -7,42 +7,24 @@ import requests
 
 
 # === DEV MODE OPTIONS ===
-def get_matchups_from_ui():
-    st.header("Enter your matchups")
-    num = st.number_input("How many matchups?", min_value=1, max_value=8, value=2)
-    matchups = []
-    for i in range(num):
-        col1, col2, col3 = st.columns([2, 3, 3])
-        with col1:
-            opp = st.text_input(f"Opponent {i+1}", key=f"opp_{i}")
-        with col2:
-            ins = st.text_area(
-                f"Cards IN vs {i+1}", placeholder="comma-separated", key=f"in_{i}"
-            )
-        with col3:
-            outs = st.text_area(
-                f"Cards OUT vs {i+1}", placeholder="comma-separated", key=f"out_{i}"
-            )
-        ins_list = [c.strip() for c in ins.split(",") if c.strip()]
-        outs_list = [c.strip() for c in outs.split(",") if c.strip()]
-        matchups.append({"opponent": opp, "ins": ins_list, "outs": outs_list})
-    return matchups
-
 
 def get_dummy_matchups():
+    # pull your actual keys out of session_state:
+    mb = list(st.session_state.deck_data["mainboard"].keys())
+    sb = list(st.session_state.deck_data["sideboard"].keys())
     return [
-        {
-            "opponent": "Mono‐Green Stompy",
-            "ins": ["Path to Exile", "Leyline of Sanctity"],
-            "outs": ["Wild Growth", "Llanowar Elves"],
-        },
-        {
-            "opponent": "Burn",
-            "ins": ["Eidolon of the Great Revel"],
-            "outs": ["Goblin Guide", "Lightning Bolt"],
-        },
+        { mb[0]: "-2", sb[0]: "+2", "Matchup": "Mono-Green Stompy" },
+        { mb[1]: "-1", sb[1]: "+1", "Matchup": "Burn"           },
+        { mb[2]: "-2", sb[5]: "+2", "Matchup": "Blue Tempo"     },   # re-uses sb[0]
+        { mb[3]: "-1", sb[2]: "+1", "Matchup": "Gruul Midrange" },
+        { mb[0]: "-3", sb[3]: "+3", "Matchup": "Tron Lands"     },   # re-uses mb[0]
+        { mb[4]: "-2", sb[4]: "+2", "Matchup": "UW Control"     },
+        { mb[1]: "-2", sb[2]: "+2", "Matchup": "Jund"           },   # re-uses sb[2]
+        { mb[2]: "-1", sb[1]: "+1", "Matchup": "Affinity"       },   # re-uses sb[1]
+        { mb[7]: "-2", sb[4]: "+2", "Matchup": "UW Control"     },
+        { mb[1]: "-2", sb[2]: "+2", "Matchup": "Jund"           },   # re-uses sb[2]
+        { mb[2]: "-1", sb[1]: "+1", "Matchup": "Affinity"       },   # re-uses sb[1]
     ]
-
 
 # ========================
 
@@ -59,7 +41,6 @@ def parse_decklist(deck_text: str) -> dict[str, int]:
         except ValueError:
             continue
     return deck
-
 
 # ========================
 
@@ -103,7 +84,7 @@ def render_matchup_entry():
         )
 
         # OUT cards
-        st.subheader("Card(s) to take :red[OUT]:")
+        st.html('<h2>Card(s) to take <span style="color:#f7b2ad;">OUT</span>:</h2>')
         st.multiselect(
             "Search:",
             options=list(st.session_state.deck_data["mainboard"].keys()),
@@ -120,7 +101,7 @@ def render_matchup_entry():
             st.session_state.out_quantities[card] = qty
 
         # IN cards
-        st.subheader("Card(s) to bring :green[IN]:")
+        st.html('<h2>Card(s) to bring <span style="color:#9abca7;">IN</span>:</h2>')
         st.multiselect(
             "Search:",
             options=list(st.session_state.deck_data["sideboard"].keys()),
@@ -168,7 +149,6 @@ def render_matchup_entry():
                     st.session_state.confirm_add = False
                     st.rerun()
 
-
 # ========================
 
 
@@ -183,77 +163,74 @@ def render_matrix_figure(df: pd.DataFrame, card_labels: dict[str, str]) -> plt.F
     df_export = df[::-1].copy()
 
     # build a matrix of text + background colors
-    matrix = np.empty(df_export.shape, dtype=object)
-    color_matrix = np.full(df_export.shape, "", dtype=object)
+    matrix = np.empty(df_export.shape, object)
+    color_m = np.full(df_export.shape, "", object)
     for i in range(df_export.shape[0]):
         for j in range(df_export.shape[1]):
-            val = df_export.iat[i, j]
-            if isinstance(val, str):
-                if val.startswith("+"):
-                    matrix[i, j] = val[1:]
-                    color_matrix[i, j] = "#b7e4c7"
-                elif val.startswith("-"):
-                    matrix[i, j] = val[1:]
-                    color_matrix[i, j] = "#f4cccc"
-                else:
-                    matrix[i, j] = ""
+            v = df_export.iat[i,j]
+            if isinstance(v, str) and v:
+                matrix[i,j] = v.lstrip('+-')
+                color_m[i,j] = "#9abca7" if v.startswith('+') else "#f7b2ad"
             else:
-                matrix[i, j] = ""
+                matrix[i,j] = ""
 
-    # sizing
-    fontsize = 12
-    cell_size = fontsize * 0.1
-    fig_width = df_export.shape[1] * cell_size
-    fig_height = df_export.shape[0] * cell_size
+    # ─── MAGIC CARD SIZING ─────────────────────────────────────────────────
+    # force the figure to Magic card dimensions: 2.5" wide × 3.5" tall
+    fig, ax = plt.subplots(
+        figsize=(3.5, 2.5),
+        constrained_layout=True
+    )
+    ax.set_aspect("auto")
 
-    fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=300)
+    name_fontsize=5
+
+ # ────────────────────────────────────────────────────────────────────────────
+
     ax.set_xlim(0, matrix.shape[1])
     ax.set_ylim(0, matrix.shape[0])
 
-    # draw colored rectangles + text
+    # draw cells + numbers
     for i in range(matrix.shape[0]):
         for j in range(matrix.shape[1]):
-            if matrix[i, j] and color_matrix[i, j]:
-                ax.add_patch(
-                    plt.Rectangle(
-                        (j, matrix.shape[0] - i - 1), 1, 1, color=color_matrix[i, j]
-                    )
-                )
+            if matrix[i,j]:
+                ax.add_patch(plt.Rectangle(
+                    (j, matrix.shape[0]-i-1), 1, 1,
+                    color=color_m[i,j]
+                ))
                 ax.text(
-                    j + 0.5,
-                    matrix.shape[0] - i - 0.5,
-                    matrix[i, j],
-                    ha="center",
-                    va="center",
-                    fontsize=fontsize,
+                    j+0.5, matrix.shape[0]-i-0.5, matrix[i,j],
+                    ha="center", va="center", fontsize=6
                 )
 
-    # labels
-    ax.set_xticks(np.arange(len(df_export.columns)) + 0.5)
+    # ticks + labels
+    ax.set_xticks(np.arange(df_export.shape[1]) + 0.5)
     ax.set_xticklabels(
-        [card_labels.get(col, col) for col in df_export.columns],
-        rotation=45,
-        ha="right",
-        fontsize=9,
+      [card_labels.get(c,c) for c in df_export.columns],
+      rotation=50, ha="right", fontsize=name_fontsize
     )
-    ax.set_yticks(np.arange(len(df_export.index)) + 0.5)
-    ax.set_yticklabels(df_export.index, fontsize=10)
+    ax.set_yticks(np.arange(df_export.shape[0]) + 0.5)
+    ax.set_yticklabels(df_export.index, fontsize=name_fontsize)
 
-    ax.set_title("Sideboard Guide", fontsize=14)
-    ax.tick_params(left=True, bottom=True)
-    for spine in ax.spines.values():
-        spine.set_visible(False)
+    # Title
+    #ax.set_title("Sideboard Guide", fontsize=title_fontsize)
 
-    # grid lines behind cells
+
+
+    # draw grid behind cells
     ax.set_xticks(np.arange(matrix.shape[1]), minor=True)
     ax.set_yticks(np.arange(matrix.shape[0]), minor=True)
-    ax.grid(which="minor", color="black", linestyle="-", linewidth=1)
+    #ax.grid(which="minor", color="black", alpha=0.5, linestyle="-", linewidth=0.5)
     ax.tick_params(which="minor", size=0)
+    for s in ax.spines.values(): s.set_visible(True)
+    # flip so the “first” row is at the top
+    # ax.invert_yaxis()
 
-    ax.invert_yaxis()
-    plt.tight_layout()
+     # ─── add a thin black border around the *whole* image ───────────────
+    fig.patch.set_edgecolor('black')
+    fig.patch.set_linewidth(1)
+    # ─────────────────────────────────────────────────────────────────────
+
     return fig
-
 
 # ========================
 
@@ -274,7 +251,6 @@ def submit_bug_report(bug_text, include_session):
         st.error(
             f"Failed to submit bug report: {e}. Please create an issue on [GitHub](https://github.com/NBrichta/mtg-sideboarder) and I'll try to address it as soon as I can."
         )
-
 
 # ========================
 
@@ -298,6 +274,5 @@ def render_hard_reset_button():
             if st.button("Cancel", key="confirm_reset_cancel"):
                 st.session_state.confirm_reset = False
                 st.rerun()
-
 
 # ========================

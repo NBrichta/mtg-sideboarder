@@ -17,12 +17,14 @@ This app does not (*and will not*) magically improve your match win percentage i
 
 ## Planned Features (in rough priority list)
 - Edit or delete matchups after adding
+    - Users should be able to customise the order they are displayed to their liking
 - Paste a hyperlink to a decklist for automatic importing (MTGGoldfish, Moxfield, etc.)
 - Download sideboard guide in printer-ready autoscaled PDF or SVG format (divider size, A4 size, etc.)
+- Implement some form of smart abbreviation for commonly used words or phrases
 - Alert the user if their maindeck total will be under 60 cards post-sideboard 
-- Bug reporting button
 - Colored vs. printer-friendly export options
 - Different thematic choices for export image
 - Integrate autocomplete cardnames from [MTGJSON](https://mtgjson.com) (is this even necessary?)
     - Possible use case: Displaying deck stats (number of cards, avg. CMC, etc. after submitting decklist)
 - Save user profiles (login through Google?)
+    - Rather than messing around with OAuth nonsense, it might be better to generate a unique hash-key that saves the decklist & matchups to a text file

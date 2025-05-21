@@ -71,10 +71,6 @@ st.markdown(
 This section lets you import your decklist in standard MTGO format. Once you click **"Submit Deck"**, the cards will automatically be parsed into mainboard and sideboard libraries for the search bars in the next section.
 """
 
-decklist_text = st.text_input(
-    "Your Decklist Name",
-    placeholder="Optional. If left blank, the exported guide will be untitled.",
-)
 mainboard_text = st.text_area(
     "Mainboard",
     height=200,
@@ -101,9 +97,6 @@ default_session = {
 for key, default in default_session.items():
     st.session_state.setdefault(key, default)
 
-# If dev-mode, and you’ve already submitted a deck, load dummy matchups now
-if USE_DUMMY_MATCHUPS and st.session_state.deck_data:
-    st.session_state.matchups = sb_mod.get_dummy_matchups()
 
 # Submit deck
 if st.button("Submit Deck"):
@@ -119,15 +112,30 @@ if st.button("Submit Deck"):
     st.session_state.out_quantities = {}
     st.session_state.in_quantities = {}
 
-# ============= Step 2: Matchup Entry (skipped in DEV mode)
+# ─────── Step 2: Matchup Entry ───────
+if st.session_state.deck_data:
+    if USE_DUMMY_MATCHUPS:
+        # dev mode: inject dummy data
+        st.session_state.matchups = sb_mod.get_dummy_matchups()
+    else:
+        # prod mode: show the Add-Matchup UI
+        sb_mod.render_matchup_entry()
 
-# only show the UI if you’re *not* using dummy data:
-if not USE_DUMMY_MATCHUPS:
-    sb_mod.render_matchup_entry()
 
 # Matrix preview
 if st.session_state.matchups:
     st.header("Sideboard Matrix Preview")
+
+    st.markdown(
+        """
+    <hr style="
+      border: 2px solid #AF5D63;
+      width: 100%;
+      margin: 0 0 1em 0;
+    ">
+    """,
+        unsafe_allow_html=True,
+    )
     """
     This section displays a sorted preview of your added matchups so far, with the most recent at the top. Once you are satisfied, click **"Download options"** to specify the format and size you want the output to be in.
     """
@@ -145,7 +153,7 @@ if st.session_state.matchups:
     if st.button("Download options"):
         fig = sb_mod.render_matrix_figure(df, st.session_state.card_labels)
         buf = io.BytesIO()
-        plt.savefig(buf, format="png", bbox_inches="tight")
+        plt.savefig(buf, format="png", dpi=300)
         st.download_button(
             "Download PNG",
             data=buf.getvalue(),

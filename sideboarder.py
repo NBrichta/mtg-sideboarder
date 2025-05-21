@@ -14,7 +14,6 @@ Built using Python 3.1 and Streamlit.
 
 Links:   [![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=flat&logo=github&logoColor=white)](https://github.com/NBrichta/mtg-sideboarder)[![Ko-Fi](https://img.shields.io/badge/Ko--fi-F16061?style=flat&logo=ko-fi&logoColor=white)](https://ko-fi.com/sideboarder)
 """
-
 # =========== Step 1: Deck Input
 st.header(
     "Import Decklist",

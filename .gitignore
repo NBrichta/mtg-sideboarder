@@ -178,3 +178,4 @@ cython_debug/
 start.command
 test_list.txt
 requirements.txt
+.DS_Store

@@ -1,0 +1,14 @@
+name: sideboarder_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pandas
+  - numpy
+  - pillow
+  - pip
+  - pip:
+    - streamlit
+    - pytest       # for your tests
+    - flake8       # for linting in CI
+    - black        # for code formatting

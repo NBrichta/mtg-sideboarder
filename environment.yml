@@ -6,9 +6,10 @@ dependencies:
   - pandas
   - numpy
   - requests
+  - matplotlib
   - pip
   - pip:
     - streamlit
-    - pytest       # for your tests
-    - flake8       # for linting in CI
-    - black        # for code formatting
+    - pytest
+    - flake8
+    - black

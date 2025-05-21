@@ -5,7 +5,7 @@ import io
 import numpy as np
 import sideboarder_modular as sb_mod
 
-st.set_page_config(page_title="MTG Sideboard Guide", layout="centered")
+st.set_page_config(page_title="MTG Sideboard Guide", layout="wide")
 st.title("MTG Sideboarder")
 """
 A lightweight web app for designing and exporting Magic: The Gathering sideboard guides.

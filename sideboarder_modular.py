@@ -5,9 +5,10 @@ import io
 import numpy as np
 import requests
 
+
 # === Utility Functions ===
 @st.cache_data(show_spinner=False)
-def parse_decklist(deck_text: str) -> dict[str,int]:
+def parse_decklist(deck_text: str) -> dict[str, int]:
     """Parse MTGO‐style decklist into {card_name: quantity}."""
     deck = {}
     for line in deck_text.strip().splitlines():
@@ -17,6 +18,7 @@ def parse_decklist(deck_text: str) -> dict[str,int]:
         except ValueError:
             continue
     return deck
+
 
 @st.cache_data(show_spinner=False)
 def render_matrix_figure(df: pd.DataFrame, card_labels: dict[str, str]) -> plt.Figure:
@@ -29,21 +31,21 @@ def render_matrix_figure(df: pd.DataFrame, card_labels: dict[str, str]) -> plt.F
 
     # build a matrix of text + background colors
     matrix = np.empty(df_export.shape, dtype=object)
-    color_matrix = np.full(df_export.shape, '', dtype=object)
+    color_matrix = np.full(df_export.shape, "", dtype=object)
     for i in range(df_export.shape[0]):
         for j in range(df_export.shape[1]):
             val = df_export.iat[i, j]
             if isinstance(val, str):
-                if val.startswith('+'):
+                if val.startswith("+"):
                     matrix[i, j] = val[1:]
-                    color_matrix[i, j] = '#b7e4c7'
-                elif val.startswith('-'):
+                    color_matrix[i, j] = "#b7e4c7"
+                elif val.startswith("-"):
                     matrix[i, j] = val[1:]
-                    color_matrix[i, j] = '#f4cccc'
+                    color_matrix[i, j] = "#f4cccc"
                 else:
-                    matrix[i, j] = ''
+                    matrix[i, j] = ""
             else:
-                matrix[i, j] = ''
+                matrix[i, j] = ""
 
     # sizing
     fontsize = 12
@@ -61,24 +63,25 @@ def render_matrix_figure(df: pd.DataFrame, card_labels: dict[str, str]) -> plt.F
             if matrix[i, j] and color_matrix[i, j]:
                 ax.add_patch(
                     plt.Rectangle(
-                        (j, matrix.shape[0] - i - 1),
-                        1, 1,
-                        color=color_matrix[i, j]
+                        (j, matrix.shape[0] - i - 1), 1, 1, color=color_matrix[i, j]
                     )
                 )
                 ax.text(
                     j + 0.5,
                     matrix.shape[0] - i - 0.5,
                     matrix[i, j],
-                    ha="center", va="center",
-                    fontsize=fontsize
+                    ha="center",
+                    va="center",
+                    fontsize=fontsize,
                 )
 
     # labels
     ax.set_xticks(np.arange(len(df_export.columns)) + 0.5)
     ax.set_xticklabels(
         [card_labels.get(col, col) for col in df_export.columns],
-        rotation=45, ha="right", fontsize=9
+        rotation=45,
+        ha="right",
+        fontsize=9,
     )
     ax.set_yticks(np.arange(len(df_export.index)) + 0.5)
     ax.set_yticklabels(df_export.index, fontsize=10)
@@ -91,12 +94,13 @@ def render_matrix_figure(df: pd.DataFrame, card_labels: dict[str, str]) -> plt.F
     # grid lines behind cells
     ax.set_xticks(np.arange(matrix.shape[1]), minor=True)
     ax.set_yticks(np.arange(matrix.shape[0]), minor=True)
-    ax.grid(which='minor', color='black', linestyle='-', linewidth=1)
-    ax.tick_params(which='minor', size=0)
+    ax.grid(which="minor", color="black", linestyle="-", linewidth=1)
+    ax.tick_params(which="minor", size=0)
 
     ax.invert_yaxis()
     plt.tight_layout()
     return fig
+
 
 def submit_bug_report(bug_text, include_session):
     report_text = bug_text
@@ -104,16 +108,16 @@ def submit_bug_report(bug_text, include_session):
         report_text += f"\n---\nDeck: {st.session_state.get('deck_data')}\nMatchups: {st.session_state.get('matchups')}"
 
     form_url = "https://docs.google.com/forms/d/e/1FAIpQLSe3VRA_G7MRTM0PHKlErHYMlH3YxTmiL_GuQrw0WaUSwxle4Q/formResponse"
-    form_data = {
-        "entry.1096092479": bug_text,
-        "entry.258759295": report_text
-    }
+    form_data = {"entry.1096092479": bug_text, "entry.258759295": report_text}
 
     try:
         requests.post(form_url, data=form_data)
         st.success("Bug report submitted. Thank you!!")
     except Exception as e:
-        st.error(f"Failed to submit bug report: {e}. Please create an issue on [GitHub](https://github.com/NBrichta/mtg-sideboarder) and I'll try to address it as soon as I can.")
+        st.error(
+            f"Failed to submit bug report: {e}. Please create an issue on [GitHub](https://github.com/NBrichta/mtg-sideboarder) and I'll try to address it as soon as I can."
+        )
+
 
 def render_hard_reset_button():
     st.sidebar.markdown("💔 Help, I've made a huge mistake!")

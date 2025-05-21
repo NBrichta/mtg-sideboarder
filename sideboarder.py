@@ -5,15 +5,44 @@ import io
 import numpy as np
 import sideboarder_modular as sb_mod
 
-st.set_page_config(page_title="MTG Sideboard Guide", layout="wide")
+
+st.set_page_config(
+    page_title="MTG Sideboard Guide",
+    page_icon="./icon.ico",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+    menu_items={
+        "Get Help": "https://www.extremelycoolapp.com/help",
+        "Report a bug": "https://www.extremelycoolapp.com/bug",
+        "About": "# This is a header. This is an *extremely* cool app!",
+    },
+)
+
+# Inject CSS to force all text inputs & text areas into monospace
+st.markdown(
+    """
+    <style>
+      /* text_area widget */
+      .stTextArea textarea {
+        font-family: monospace !important;
+      }
+      /* text_input widget */
+      .stTextInput input {
+        font-family: monospace !important;
+      }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
 st.title("MTG Sideboarder")
-"""
+st.markdown("""
 A lightweight web app for designing and exporting Magic: The Gathering sideboard guides.
 
-Built using Python 3.1 and Streamlit.
+Follow the steps below to get started!
+""")
 
-Links:   [![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=flat&logo=github&logoColor=white)](https://github.com/NBrichta/mtg-sideboarder)[![Ko-Fi](https://img.shields.io/badge/Ko--fi-F16061?style=flat&logo=ko-fi&logoColor=white)](https://ko-fi.com/sideboarder)
-"""
 # =========== Step 1: Deck Input
 st.header(
     "Import Decklist",
@@ -169,7 +198,7 @@ if st.session_state.matchups:
     pretty_df = df.rename(columns=st.session_state.card_labels)
     st.dataframe(pretty_df.fillna(""))
 
-    if st.button("Download PNG"):
+    if st.button("Download options"):
         fig = sb_mod.render_matrix_figure(df, st.session_state.card_labels)
         buf = io.BytesIO()
         plt.savefig(buf, format="png", bbox_inches="tight")
@@ -181,8 +210,35 @@ if st.session_state.matchups:
         )
         plt.close(fig)
 
+# Development/Support links
+
+st.sidebar.write(
+    """
+Thanks for using MTG Sideboarder!
+
+Check out the changelogs or support development:
+"""
+)
+
+st.sidebar.markdown(
+    """
+    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+      <a href="https://github.com/NBrichta/mtg-sideboarder" target="_blank">
+        <img src="https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white" alt="GitHub">
+      </a>
+      <a href="https://ko-fi.com/sideboarder" target="_blank">
+        <img src="https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Ko-fi">
+      </a>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Divider
+st.sidebar.markdown("---")
+
 # Bug report
-with st.sidebar.expander("🐛🖥️ Submit a Bug Report"):
+with st.sidebar.expander("🐛🖥️ &emsp; Submit a Bug Report"):
     bug_text = st.text_area(
         "This is my first attempt at building a web app so there are bound to be issues. Please describe the sequence of events that led to the error as best as you can:",
         height=150,
@@ -193,7 +249,7 @@ with st.sidebar.expander("🐛🖥️ Submit a Bug Report"):
     if st.button("Submit Report"):
         sb_mod.submit_bug_report(bug_text, include_session)
 
-# Divider under bug report
+# Divider
 st.sidebar.markdown("---")
 
 # Hard reset functionality

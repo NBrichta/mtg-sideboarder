@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import io
-import numpy as np
 import sideboarder_modular as sb_mod
 
 # ─────── DEVELOPMENT TOGGLE ───────

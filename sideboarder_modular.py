@@ -3,12 +3,67 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import requests
+import io
+
+def inject_css(): # Any custom CSS gets loaded in with this function. Should be moved to a style.css when I have the time
+    st.markdown(  # Differentiate fonts between inside vs. outside text entry boxes
+        """
+    <style>
+      /* text_area widget */
+      .stTextArea textarea {
+        font-family: monospace !important;
+      }
+      /* text_input widget */
+      .stTextInput input {
+        font-family: monospace !important;
+      }
+    </style>
+    """,
+        unsafe_allow_html=True,
+    )
+
+def custom_info( # A custom info box container for color scheme purposes. Need to add some blank space between the box and the Confirm/Cancel buttons
+    text: str,
+    bg_color: str = "#9DC7C8",
+    border_color: str = "#9DC7C8",
+    text_color: str = "#3C3D37",
+):
+    st.markdown(
+        f"""
+        <div style="
+            background-color: {bg_color};
+            border-left: 4px solid {border_color};
+            color: {text_color};
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+        ">
+            {text}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
-# === DEV MODE OPTIONS ===
+def section_divider():  # Just makes a red underline for section headers according to current color scheme
+    st.markdown(
+        """
+    <hr style="
+      border: 2px solid #AF5D63;
+      width: 100%;
+      margin: 0 0 1em 0;
+    ">
+    """,
+        unsafe_allow_html=True,
+    )
 
 
-def get_dummy_matchups():
+def initialize_session_state(defaults: dict): # First step -> sets up the default values for the session data
+    """Initialize Streamlit session state with provided defaults."""
+    for key, default in defaults.items():
+        st.session_state.setdefault(key, default)
+
+
+def get_dummy_matchups(): # DEV MODE ONLY -> saves having to enter matchups manually to test stuff
     # pull your actual keys out of session_state:
     mb = list(st.session_state.deck_data["mainboard"].keys())
     sb = list(st.session_state.deck_data["sideboard"].keys())
@@ -27,12 +82,44 @@ def get_dummy_matchups():
     ]
 
 
-# ========================
+def render_deck_input_section(): # Renders the section for entering decklist text
+    """Step 1: Deck input UI and submission logic."""
+    st.header(
+        "Import Decklist",
+        help=(
+            "Your decklist data **must** be in MTGO formatting (e.g. `4~Card~Name`)."
+            "  Support for importing from URLs is a high priority once I figure out how APIs work."
+        ),
+    )
+    section_divider()
+    st.markdown(
+        """
+        This section lets you import your decklist in standard MTGO formatting.
+        Once submitted, you can proceed to add matchup-sideboard choices.
+        """
+    )
+    mainboard_text = st.text_area(
+        "Mainboard", height=200,
+        placeholder="4 Amulet of Vigor\n4 Primeval Titan\n3 Scapeshift\netc.",
+    )
+    sideboard_text = st.text_area(
+        "Sideboard", height=100,
+        placeholder="1 Boseiju, Who Endures\n2 Dismember\netc.",
+    )
+    if st.button("Submit Deck"):
+        main_raw = parse_decklist(mainboard_text)
+        side_raw = parse_decklist(sideboard_text)
+        mainboard = {f"MB:{name}": qty for name, qty in main_raw.items()}
+        sideboard = {f"SB:{name}": qty for name, qty in side_raw.items()}
+        labels = {**{k: k[3:] for k in mainboard}, **{k: k[3:] for k in sideboard}}
+
+        st.session_state.deck_data = {"mainboard": mainboard, "sideboard": sideboard}
+        st.session_state.card_labels = labels
+        st.toast("Decklist saved!")
 
 
-# === Decklist Parser ===
 @st.cache_data(show_spinner=False)
-def parse_decklist(deck_text: str) -> dict[str, int]:
+def parse_decklist(deck_text: str) -> dict[str, int]: # Parses the decklist text into mainboard and sideboard quantities
     """Parse MTGO‐style decklist into {card_name: quantity}."""
     deck = {}
     for line in deck_text.strip().splitlines():
@@ -44,24 +131,14 @@ def parse_decklist(deck_text: str) -> dict[str, int]:
     return deck
 
 
-# ========================
-
-
-# === Matchup Entry ===
-def render_matchup_entry():
+def render_matchup_entry(): # Renders the section for entering matchup data 
     # only run if deck_data exists
+    MAX_OPPONENT_NAME_LENGTH = 25 # prevent absurdly long deck names
     if st.session_state.deck_data:
         st.header("Add Matchup Info")
-        st.markdown(
-            """
-    <hr style="
-      border: 2px solid #AF5D63;
-      width: 100%;
-      margin: 0 0 1em 0;
-    ">
-    """,
-            unsafe_allow_html=True,
-        )
+
+        section_divider()
+
         """
         In this section, you first define a name for the archetype you are sideboarding for,
         then search the cards you would like to remove from your mainboard and the cards
@@ -78,12 +155,15 @@ def render_matchup_entry():
             st.session_state.in_quantities = {}
             st.session_state.clear_fields = False
 
-        # opponent name
-        st.session_state.opponent_name = st.text_input(
-            "Opposing Archetype Name",
+        # ─── Opponent name input ───────────────────────────────────────────────
+        name = st.text_input(
+            f"Opposing Archetype Name (max {MAX_OPPONENT_NAME_LENGTH} chars)",
             value=st.session_state.opponent_name,
             placeholder="e.g. Boros Energy",
+            key="opponent_name",
         )
+        # (Streamlit auto-updates st.session_state.opponent_name for us)
+        # ───────────────────────────────────────────────────────────────────────
 
         # OUT cards
         st.html('<h2>Card(s) to take <span style="color:#f7b2ad;">OUT</span>:</h2>')
@@ -119,16 +199,39 @@ def render_matchup_entry():
             )
             st.session_state.in_quantities[card] = qty
 
-        # Add / confirm buttons
+        # ─── Add / confirm buttons ──────────────────────────────────────────────
         if not st.session_state.confirm_add:
+            # always show the button, but validate on click
             if st.button("Add Matchup"):
-                if st.session_state.opponent_name.strip() == "":
-                    st.warning("Please enter an opposing archetype name.")
+                total_out = sum(st.session_state.out_quantities.values())
+                total_in = sum(st.session_state.in_quantities.values())
+                if not name.strip():
+                    st.error("Please enter an opposing archetype name.")
+                elif len(name) > MAX_OPPONENT_NAME_LENGTH:
+                    st.error(
+                        f"Archetype name exceeds {MAX_OPPONENT_NAME_LENGTH}-character limit.")
+                elif total_out == 0 and total_in ==0:
+                    st.error(
+                        "You’ve entered a matchup name but haven’t selected any cards to remove or add. Please pick at least one card to proceed."
+                    )
                 else:
                     st.session_state.confirm_add = True
                     st.rerun()
         else:
-            st.warning("Click Confirm to finalize or Cancel to undo.")
+            # ─── Quantity‐match check ─────────────────────────────────────────
+            total_out = sum(st.session_state.out_quantities.values())
+            total_in = sum(st.session_state.in_quantities.values())
+            if total_out != total_in:
+                st.warning(
+                    f"Warning: you’re removing {total_out} card"
+                    f"{'s' if total_out!=1 else ''} but adding {total_in} "
+                    f"card{'s' if total_in!=1 else ''}. "
+                    "This will result in a library with more or less than 60 cards. Click 'Cancel' if you'd like to change this."
+                )
+
+            # finalize or cancel
+            custom_info("Click Confirm to finalize or Cancel to undo.")
+
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("Confirm"):
@@ -149,15 +252,48 @@ def render_matchup_entry():
             with col2:
                 if st.button("Cancel"):
                     st.session_state.confirm_add = False
+                    st.session_state.clear_fields = True
                     st.rerun()
+        # ───────────────────────────────────────────────────────────────────────
 
 
-# ========================
+def render_matrix_section(): # Renders the preview matrix and download options
+    """Step 3: Matrix preview and PNG download."""
+    if not st.session_state.matchups:
+        return
+    st.header("Sideboard Matrix Preview")
+    section_divider()
+    st.markdown(
+        """
+        This section displays a sorted preview of your added matchups.
+        Click **Download options** to export the matrix as a PNG.
+        """
+    )
+    df = pd.DataFrame(st.session_state.matchups).set_index("Matchup")
+    mb = sorted(st.session_state.deck_data.get("mainboard", {}).keys())
+    sb = sorted(st.session_state.deck_data.get("sideboard", {}).keys())
+    cols = [c for c in mb if c in df.columns] + [c for c in sb if c in df.columns]
+    df = df[cols][::-1]
+    df = df.loc[:, (df != "").any(axis=0)]
+    st.dataframe(df)
+
+    if st.button("Download options"):
+        fig = render_matrix_figure(df, st.session_state.card_labels)
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=300)
+        buf.seek(0)
+        st.download_button(
+            "Download matrix as PNG",
+            data=buf,
+            file_name="sideboard-matrix.png",
+            mime="image/png",
+            use_container_width=True,
+        )
+        plt.close(fig)
 
 
-# === Render Export ===
 @st.cache_data(show_spinner=False)
-def render_matrix_figure(df: pd.DataFrame, card_labels: dict[str, str]) -> plt.Figure:
+def render_matrix_figure(df: pd.DataFrame, card_labels: dict[str, str]) -> plt.Figure: # Renders the image that gets exported
     """
     Render the sideboard matrix as a matplotlib Figure, caching the result
     so it only re-draws when `df` or `card_labels` change.
@@ -179,7 +315,7 @@ def render_matrix_figure(df: pd.DataFrame, card_labels: dict[str, str]) -> plt.F
 
     # ─── MAGIC CARD SIZING ─────────────────────────────────────────────────
     # force the figure to Magic card dimensions: 2.5" wide × 3.5" tall
-    fig, ax = plt.subplots(figsize=(3.5, 2.5), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(2.5, 3.5), constrained_layout=True)
     ax.set_aspect("auto")
 
     name_fontsize = 5
@@ -239,11 +375,37 @@ def render_matrix_figure(df: pd.DataFrame, card_labels: dict[str, str]) -> plt.F
     return fig
 
 
-# ========================
+def render_sidebar(): # Renders the sidebar text and options
+    """Render sidebar links, badges, and bug-report expander."""
+    st.sidebar.write(
+        """
+        Thanks for using **MTG Sideboarder!**
+
+        Check out the changelogs or support development:
+        """
+    )
+    st.sidebar.markdown(
+        """
+        <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
+          <a href="https://github.com/NBrichta/mtg-sideboarder" target="_blank">
+            <img src="https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white">
+          </a>
+          <a href="https://ko-fi.com/sideboarder" target="_blank">
+            <img src="https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white">
+          </a>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("🐛🖥️  Submit a Bug Report"):
+        bug = st.text_area("Describe the issue:", height=150)
+        incl = st.checkbox("Include session state (deck + matchups)", value=True)
+        if st.button("Submit Report"):
+            submit_bug_report(bug, incl)
 
 
-# === Bug Reporting ===
-def submit_bug_report(bug_text, include_session):
+def submit_bug_report(bug_text, include_session): # Tells the app where to send bug reports
     report_text = bug_text
     if include_session:
         report_text += f"\n---\nDeck: {st.session_state.get('deck_data')}\nMatchups: {st.session_state.get('matchups')}"
@@ -260,19 +422,17 @@ def submit_bug_report(bug_text, include_session):
         )
 
 
-# ========================
-
-
-# === Reset Button ===
-def render_hard_reset_button():
+def render_hard_reset_button(): # Renders the session reset button
     st.sidebar.markdown("💔 Help, I've made a huge mistake!")
 
     if not st.session_state.get("confirm_reset", False):
-        if st.sidebar.button(":red[Hard Reset All Data]", key="reset_confirm_button"):
+        if st.sidebar.button(":red[Reset Session Data]", key="reset_confirm_button"):
             st.session_state.confirm_reset = True
             st.rerun()
     else:
-        st.sidebar.warning("This will clear all session data. Are you sure?")
+        st.sidebar.warning(
+            "This will clear your decklist and matchup matrix data. Are you sure?"
+        )
         col1, col2 = st.sidebar.columns(2)
         with col1:
             if st.button("Yes, Reset", key="confirm_reset_yes"):
@@ -283,5 +443,3 @@ def render_hard_reset_button():
                 st.session_state.confirm_reset = False
                 st.rerun()
 
-
-# ========================

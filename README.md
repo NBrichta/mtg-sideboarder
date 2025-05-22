@@ -20,8 +20,7 @@ This app does not (*and will not*) magically improve your match win percentage i
     - Users should be able to customise the order they are displayed to their liking
 - Paste a hyperlink to a decklist for automatic importing (MTGGoldfish, Moxfield, etc.)
 - Download sideboard guide in printer-ready autoscaled PDF or SVG format (divider size, A4 size, etc.)
-- Implement some form of smart abbreviation for commonly used words or phrases
-- Alert the user if their maindeck total will be under 60 cards post-sideboard 
+- Implement some form of smart abbreviation for commonly used words or phrases 
 - Colored vs. printer-friendly export options
 - Different thematic choices for export image
 - Integrate autocomplete cardnames from [MTGJSON](https://mtgjson.com) (is this even necessary?)

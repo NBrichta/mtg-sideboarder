@@ -176,6 +176,6 @@ cython_debug/
 
 
 start.command
-test_list.txt
+color_pallette.txt
 requirements.txt
 .DS_Store

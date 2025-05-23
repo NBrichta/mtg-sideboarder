@@ -5,6 +5,8 @@ enableCORS         = true
 [browser]
 gatherUsageStats   = true
 
+[client] 
+showSidebarNavigation = false
 
 [theme]
 primaryColor             = "#AF5D63"

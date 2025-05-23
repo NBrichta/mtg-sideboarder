@@ -3,13 +3,6 @@ repos:
     hooks:
       - id: check-config-headless
         name: Ensure headless = true in Streamlit config.toml
-        entry: grep -qE '^ *headless *= *true *$' .streamlit/config.toml
+        entry: bash -c "grep -qE '^[[:space:]]*headless[[:space:]]*=[[:space:]]*true\\b' .streamlit/config.toml || (echo >&2 '⚠️  .streamlit/config.toml must contain headless = true'; exit 1)"
         language: system
         files: ^\.streamlit/config\.toml$
-      - id: check-dummy-matchups
-        name: Ensure USE_DUMMY_MATCHUPS = False in sideboarder.py
-        entry: >
-          bash -c "grep -q 'USE_DUMMY_MATCHUPS = False' sideboarder.py \
-            || (echo >&2 '⚠️  sideboarder.py must contain exactly `USE_DUMMY_MATCHUPS = False`'; exit 1)"
-        language: system
-        files: ^sideboarder\.py$

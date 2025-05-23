@@ -7,6 +7,9 @@ dependencies:
   - numpy
   - requests
   - matplotlib
+  - io
+  - re
+  - hashlib
   - pip
   - pip:
     - pre-commit

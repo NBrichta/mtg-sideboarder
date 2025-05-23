@@ -48,6 +48,25 @@ def custom_info(  # A custom info box container for color scheme purposes. Need 
         unsafe_allow_html=True,
     )
 
+def splash_buttons():
+    col1, col2, col3 = st.columns([0.1,0.8,0.1])
+    with col2:
+        st.link_button(
+        "Generate a new sideboard guide",
+        "/create",
+        type="primary",
+        icon=":material/open_in_new:",
+        use_container_width=True,
+        )
+    col4, col5, col6 = st.columns([0.2,0.6,0.2])
+    with col5:
+        st.link_button(
+            "Edit a saved sideboard guide", 
+            '/editor', 
+            type="secondary", 
+            icon=":material/edit:", 
+            use_container_width=True
+        )
 
 def section_divider():  # Just makes a red underline for section headers according to current color scheme
     st.markdown(
@@ -82,7 +101,7 @@ def import_deck_from_goldfish(url: str) -> dict[str, dict[str, int]]:
     # 1. pull the numeric ID from the URL
     m = re.search(r"/deck/(\d+)", url)
     if not m:
-        st.error("❌ Couldn't parse a deck ID from that URL.")
+        st.error("❌ Couldn't parse a deck from that URL. Make sure your link contains `.../deck/[deck_id]`. ")
         return {}
     deck_id = m.group(1)
 
@@ -119,6 +138,7 @@ def import_deck_from_goldfish(url: str) -> dict[str, dict[str, int]]:
 
 
 def get_dummy_matchups():  # DEV MODE ONLY -> saves having to enter matchups manually to test stuff
+   
     # pull your actual keys out of session_state:
     mb = list(st.session_state.deck_data["mainboard"].keys())
     sb = list(st.session_state.deck_data["sideboard"].keys())
@@ -142,7 +162,7 @@ def render_deck_input_section():  # Renders the section for entering decklist te
     st.header(
         "Import Decklist",
         help=(
-            "For this section to work properly, your decklist data **must** be in MTGO formatting (e.g. `4 Llanowar Elves`). Currently, importing from URLs only works for MTGGoldfish but I plan to add more deckbuilding sites (Moxfield, CubeCobra, Scryfall, etc.) in the future."
+            "For this section to work properly, your decklist data **must** be in MTGO formatting for the parser to interpret the values (e.g. `4 Llanowar Elves`). Currently, importing from URLs only works for MTGGoldfish but I plan to add more deckbuilding sites (Moxfield, CubeCobra, Scryfall, etc.) in the future."
         ),
     )
     section_divider()
@@ -498,7 +518,7 @@ def render_sidebar():  # Renders the sidebar text and options
         unsafe_allow_html=True,
     )
     st.sidebar.markdown("---")
-    with st.sidebar.expander("🐛🖥️&emsp;Submit a Bug Report"):
+    with st.sidebar.expander("👾&emsp;Submit a Bug Report"):
         bug = st.text_area("Describe the issue:", height=150)
         incl = st.checkbox("Include session state (deck + matchups)", value=True)
         if st.button("Submit Report"):
@@ -526,10 +546,10 @@ def submit_bug_report(
 
 
 def render_hard_reset_button():  # Renders the session reset button
-    st.sidebar.markdown("💔 Help, I've made a huge mistake!")
+    st.sidebar.markdown("")
 
     if not st.session_state.get("confirm_reset", False):
-        if st.sidebar.button(":red[Reset Session Data]", key="reset_confirm_button"):
+        if st.sidebar.button("❌&emsp;:red[Reset Session Data]", key="reset_confirm_button"):
             st.session_state.confirm_reset = True
             st.rerun()
     else:

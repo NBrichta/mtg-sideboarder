@@ -6,7 +6,7 @@ import sideboarder_modular as sb_mod
 
 # Set page config (MUST BE FIRST)
 st.set_page_config(
-    page_title="MTG Sideboarder",
+    page_title="Create - MTG Sideboarder",
     page_icon="./images/icon.ico",
     layout="centered",
     initial_sidebar_state="auto",
@@ -21,11 +21,10 @@ USE_DUMMY_MATCHUPS = False  # Inputs matchup_data automatically to save developm
 
 # Inject custom CSS and set up page header
 sb_mod.inject_css()
-st.title("MTG Sideboarder")
+st.title("Sideboard Guide Generator")
 st.markdown(
     """
-    A lightweight UI for designing and exporting Magic: The Gathering sideboard guides.
-    Follow the steps below to get started!
+    Generate a new sideboard guide by following the steps below:
     """
 )
 

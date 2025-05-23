@@ -4,8 +4,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import requests
 import io
+import re
+from hashlib import sha1
 
-def inject_css(): # Any custom CSS gets loaded in with this function. Should be moved to a style.css when I have the time
+
+def inject_css():  # Any custom CSS gets loaded in with this function. Should be moved to a style.css when I have the time
     st.markdown(  # Differentiate fonts between inside vs. outside text entry boxes
         """
     <style>
@@ -22,23 +25,25 @@ def inject_css(): # Any custom CSS gets loaded in with this function. Should be 
         unsafe_allow_html=True,
     )
 
-def custom_info( # A custom info box container for color scheme purposes. Need to add some blank space between the box and the Confirm/Cancel buttons
+
+def custom_info(  # A custom info box container for color scheme purposes. Need to add some blank space between the box and the Confirm/Cancel buttons
     text: str,
-    bg_color: str = "#9DC7C8",
-    border_color: str = "#9DC7C8",
-    text_color: str = "#3C3D37",
+    bg_color: str = "#9abca7",
+    border_color: str = "#3C3D37",
+    text_color: str = "#181C14",
 ):
     st.markdown(
         f"""
         <div style="
             background-color: {bg_color};
-            border-left: 4px solid {border_color};
+            border-left: 8px solid {border_color};
             color: {text_color};
             padding: 0.75rem 1rem;
             border-radius: 0.5rem;
         ">
             {text}
         </div>
+        <div style='height:1rem'></div>
         """,
         unsafe_allow_html=True,
     )
@@ -57,13 +62,63 @@ def section_divider():  # Just makes a red underline for section headers accordi
     )
 
 
-def initialize_session_state(defaults: dict): # First step -> sets up the default values for the session data
+def initialize_session_state(
+    defaults: dict,
+):  # First step -> sets up the default values for the session data
     """Initialize Streamlit session state with provided defaults."""
     for key, default in defaults.items():
         st.session_state.setdefault(key, default)
 
 
-def get_dummy_matchups(): # DEV MODE ONLY -> saves having to enter matchups manually to test stuff
+@st.cache_data
+def import_deck_from_goldfish(url: str) -> dict[str, dict[str, int]]:
+    """
+    Given a MTGGoldfish deck URL, returns a dict:
+    {
+      'mainboard': { card_name: count, … },
+      'sideboard': { card_name: count, … }
+    }
+    """
+    # 1. pull the numeric ID from the URL
+    m = re.search(r"/deck/(\d+)", url)
+    if not m:
+        st.error("❌ Couldn't parse a deck ID from that URL.")
+        return {}
+    deck_id = m.group(1)
+
+    # 2. hit Goldfish’s download endpoint
+    download_url = f"https://www.mtggoldfish.com/deck/download/{deck_id}"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    resp = requests.get(download_url, headers=headers)
+    if resp.status_code != 200:
+        st.error(f"❌ Failed to fetch deck (HTTP {resp.status_code}).")
+        return {}
+
+    # 3. split into lines, track mainboard vs sideboard
+    text = resp.text.strip()
+    lines = text.splitlines()
+    deck = {"mainboard": {}, "sideboard": {}}
+    zone = "mainboard"
+    for line in lines:
+        line = line.strip()
+        if not line:
+            # if there's a blank line, switch to sideboard
+            zone = "sideboard"
+            continue
+        parts = line.split(" ", 1)
+        if len(parts) != 2:
+            continue
+        count, name = parts
+        try:
+            deck[zone][name.strip()] = int(count)
+        except ValueError:
+            # skip malformed lines
+            continue
+
+    return deck
+
+
+def get_dummy_matchups():  # DEV MODE ONLY -> saves having to enter matchups manually to test stuff
     # pull your actual keys out of session_state:
     mb = list(st.session_state.deck_data["mainboard"].keys())
     sb = list(st.session_state.deck_data["sideboard"].keys())
@@ -82,28 +137,48 @@ def get_dummy_matchups(): # DEV MODE ONLY -> saves having to enter matchups manu
     ]
 
 
-def render_deck_input_section(): # Renders the section for entering decklist text
+def render_deck_input_section():  # Renders the section for entering decklist text
     """Step 1: Deck input UI and submission logic."""
     st.header(
         "Import Decklist",
         help=(
-            "Your decklist data **must** be in MTGO formatting (e.g. `4~Card~Name`)."
-            "  Support for importing from URLs is a high priority once I figure out how APIs work."
+            "For this section to work properly, your decklist data **must** be in MTGO formatting (e.g. `4 Llanowar Elves`). Currently, importing from URLs only works for MTGGoldfish but I plan to add more deckbuilding sites (Moxfield, CubeCobra, Scryfall, etc.) in the future."
         ),
     )
     section_divider()
+    # a) Goldfish import
+    gf_url = st.text_input(
+        "Paste MTGGoldfish deck URL",
+        placeholder="e.g. https://www.mtggoldfish.com/deck/[deck_id]#paper",
+        key="gf_url",
+    )
+    if st.button("Import Goldfish deck"):
+        with st.spinner("Importing…"):
+            imported = import_deck_from_goldfish(gf_url)
+        if imported:
+            st.session_state.deck_data = {
+                "mainboard": imported["mainboard"],
+                "sideboard": imported["sideboard"],
+            }
+            labels = {name: name for name in imported["mainboard"].keys()}
+            labels.update({name: name for name in imported["sideboard"].keys()})
+            st.session_state.card_labels = labels
+            st.success("✅ Deck imported!")
+            st.rerun()
+
     st.markdown(
         """
-        This section lets you import your decklist in standard MTGO formatting.
-        Once submitted, you can proceed to add matchup-sideboard choices.
+        or copy-paste your decklist in standard MTGO formatting:
         """
     )
     mainboard_text = st.text_area(
-        "Mainboard", height=200,
+        "Mainboard",
+        height=200,
         placeholder="4 Amulet of Vigor\n4 Primeval Titan\n3 Scapeshift\netc.",
     )
     sideboard_text = st.text_area(
-        "Sideboard", height=100,
+        "Sideboard",
+        height=100,
         placeholder="1 Boseiju, Who Endures\n2 Dismember\netc.",
     )
     if st.button("Submit Deck"):
@@ -119,7 +194,9 @@ def render_deck_input_section(): # Renders the section for entering decklist tex
 
 
 @st.cache_data(show_spinner=False)
-def parse_decklist(deck_text: str) -> dict[str, int]: # Parses the decklist text into mainboard and sideboard quantities
+def parse_decklist(
+    deck_text: str,
+) -> dict[str, int]:  # Parses the decklist text into mainboard and sideboard quantities
     """Parse MTGO‐style decklist into {card_name: quantity}."""
     deck = {}
     for line in deck_text.strip().splitlines():
@@ -131,133 +208,150 @@ def parse_decklist(deck_text: str) -> dict[str, int]: # Parses the decklist text
     return deck
 
 
-def render_matchup_entry(): # Renders the section for entering matchup data 
-    # only run if deck_data exists
-    MAX_OPPONENT_NAME_LENGTH = 25 # prevent absurdly long deck names
-    if st.session_state.deck_data:
-        st.header("Add Matchup Info")
+def _slug_key(prefix: str, name: str) -> str:
+    """Generate a consistent, URL-safe key for a widget based on its name."""
+    return f"{prefix}_{sha1(name.encode()).hexdigest()[:8]}"
 
-        section_divider()
 
-        """
-        In this section, you first define a name for the archetype you are sideboarding for,
-        then search the cards you would like to remove from your mainboard and the cards
-        you would like to add in from your sideboard. Then click **"Add Matchup>Confirm"**
-        to add your choices to your sideboard guide.
-        """
+def _clear_temporary_state():
+    """Remove all temporary matchup state and rerun to reset the UI."""
+    for key in list(st.session_state.keys()):
+        if (
+            key.startswith("tmp_")
+            or key.startswith("tmp_qty_out")
+            or key.startswith("tmp_qty_in")
+            or key == "confirm_add"
+        ):
+            del st.session_state[key]
+    st.rerun()
 
-        # clear form fields if flagged
-        if st.session_state.clear_fields:
-            st.session_state.search_out = []
-            st.session_state.search_in = []
-            st.session_state.opponent_name = ""
-            st.session_state.out_quantities = {}
-            st.session_state.in_quantities = {}
-            st.session_state.clear_fields = False
 
-        # ─── Opponent name input ───────────────────────────────────────────────
-        name = st.text_input(
-            f"Opposing Archetype Name (max {MAX_OPPONENT_NAME_LENGTH} chars)",
-            value=st.session_state.opponent_name,
-            placeholder="e.g. Boros Energy",
-            key="opponent_name",
+def render_matchup_entry():
+    """Renders the section for entering matchup data, with robust quantity handling and clear/cancel support."""
+    MAX_OPPONENT_NAME_LENGTH = 25
+
+    # Only show if deck_data exists
+    if not st.session_state.get("deck_data"):
+        return
+
+    st.header("Add Matchup Info")
+    section_divider()
+
+    # Ensure our temporary keys exist
+    st.session_state.setdefault("tmp_opponent_name", "")
+    st.session_state.setdefault("tmp_search_out", [])
+    st.session_state.setdefault("tmp_search_in", [])
+    st.session_state.setdefault("confirm_add", False)
+
+    # Opponent name input
+    name = st.text_input(
+        f"Opposing Archetype Name (max {MAX_OPPONENT_NAME_LENGTH} chars)",
+        value=st.session_state.tmp_opponent_name,
+        placeholder="e.g. Boros Energy",
+        key="tmp_opponent_name",
+    )
+
+    # OUT cards
+    st.html('<h2>Card(s) to take <span style="color:#f7b2ad;">OUT</span>:</h2>')
+    search_out = st.multiselect(
+        "Search:",
+        options=list(st.session_state.deck_data["mainboard"].keys()),
+        format_func=lambda k: st.session_state.card_labels.get(k, k),
+        key="tmp_search_out",
+    )
+    # Render quantity inputs directly, keyed by slug
+    for card in search_out:
+        key_out = _slug_key("tmp_qty_out", card)
+        st.number_input(
+            f"Quantity to take out: {st.session_state.card_labels.get(card, card)}",
+            min_value=1,
+            max_value=st.session_state.deck_data["mainboard"][card],
+            key=key_out,
         )
-        # (Streamlit auto-updates st.session_state.opponent_name for us)
+
+    # IN cards
+    st.html('<h2>Card(s) to bring <span style="color:#9abca7;">IN</span>:</h2>')
+    search_in = st.multiselect(
+        "Search:",
+        options=list(st.session_state.deck_data["sideboard"].keys()),
+        format_func=lambda k: st.session_state.card_labels.get(k, k),
+        key="tmp_search_in",
+    )
+    for card in search_in:
+        key_in = _slug_key("tmp_qty_in", card)
+        st.number_input(
+            f"Quantity to bring in: {st.session_state.card_labels.get(card, card)}",
+            min_value=1,
+            max_value=st.session_state.deck_data["sideboard"][card],
+            key=key_in,
+        )
+
+    # Compute totals from widget keys
+    total_out = sum(
+        st.session_state.get(_slug_key("tmp_qty_out", c), 0) for c in search_out
+    )
+    total_in = sum(
+        st.session_state.get(_slug_key("tmp_qty_in", c), 0) for c in search_in
+    )
+
+    # Validation flags
+    valid_name = bool(name.strip()) and len(name) <= MAX_OPPONENT_NAME_LENGTH
+    valid_cards = total_out > 0 or total_in > 0
+    can_submit = valid_name and valid_cards
+
+    # Inline validation messages
+    if name and not name.strip():
+        st.error("Name cannot be empty.")
+    if len(name) > MAX_OPPONENT_NAME_LENGTH:
+        st.error(f"Archetype name exceeds {MAX_OPPONENT_NAME_LENGTH} characters.")
+    if valid_name and not valid_cards:
+        st.info("Select at least one card to remove or add.")
+
+    # Add Matchup button
+    if st.button("Add Matchup", disabled=not can_submit, key="add_matchup"):
+        st.session_state.confirm_add = True
+
+    # Confirmation step: warn and give Confirm/Cancel
+    if st.session_state.confirm_add:
+        if total_out != total_in:
+            st.warning(
+                f"Warning: removing {total_out} card"
+                f"{'s' if total_out != 1 else ''} but adding {total_in} card"
+                f"{'s' if total_in != 1 else ''}. This will change deck size."
+            )
+        custom_info("Click Confirm to finalize or Cancel to undo.")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Confirm", key="confirm_matchup"):
+                # Build the matchup row from current widget state
+                used = set(search_out) | set(search_in)
+                row = {c: "" for c in used}
+                for c in search_out:
+                    qty = st.session_state.get(_slug_key("tmp_qty_out", c), 0)
+                    row[c] = f"-{qty}"
+                for c in search_in:
+                    qty = st.session_state.get(_slug_key("tmp_qty_in", c), 0)
+                    row[c] = f"+{qty}"
+                row["Matchup"] = name
+
+                st.session_state.matchups.append(row)
+                st.success(f"Matchup '{name}' added!")
+
+                # Clear all temporary state
+                _clear_temporary_state()
+
+        with col2:
+            # Cancel clears temporary state via callback
+            st.button(
+                "Cancel",
+                key="cancel_matchup",
+                on_click=_clear_temporary_state,
+            )
         # ───────────────────────────────────────────────────────────────────────
 
-        # OUT cards
-        st.html('<h2>Card(s) to take <span style="color:#f7b2ad;">OUT</span>:</h2>')
-        st.multiselect(
-            "Search:",
-            options=list(st.session_state.deck_data["mainboard"].keys()),
-            format_func=lambda k: st.session_state.card_labels.get(k, k),
-            key="search_out",
-        )
-        for card in st.session_state.search_out:
-            qty = st.number_input(
-                f"Quantity to take out: {st.session_state.card_labels[card]}",
-                min_value=1,
-                max_value=st.session_state.deck_data["mainboard"][card],
-                key=f"qty_out_{card}",
-            )
-            st.session_state.out_quantities[card] = qty
 
-        # IN cards
-        st.html('<h2>Card(s) to bring <span style="color:#9abca7;">IN</span>:</h2>')
-        st.multiselect(
-            "Search:",
-            options=list(st.session_state.deck_data["sideboard"].keys()),
-            format_func=lambda k: st.session_state.card_labels.get(k, k),
-            key="search_in",
-        )
-        for card in st.session_state.search_in:
-            qty = st.number_input(
-                f"Quantity to bring in: {st.session_state.card_labels[card]}",
-                min_value=1,
-                max_value=st.session_state.deck_data["sideboard"][card],
-                key=f"qty_in_{card}",
-            )
-            st.session_state.in_quantities[card] = qty
-
-        # ─── Add / confirm buttons ──────────────────────────────────────────────
-        if not st.session_state.confirm_add:
-            # always show the button, but validate on click
-            if st.button("Add Matchup"):
-                total_out = sum(st.session_state.out_quantities.values())
-                total_in = sum(st.session_state.in_quantities.values())
-                if not name.strip():
-                    st.error("Please enter an opposing archetype name.")
-                elif len(name) > MAX_OPPONENT_NAME_LENGTH:
-                    st.error(
-                        f"Archetype name exceeds {MAX_OPPONENT_NAME_LENGTH}-character limit.")
-                elif total_out == 0 and total_in ==0:
-                    st.error(
-                        "You’ve entered a matchup name but haven’t selected any cards to remove or add. Please pick at least one card to proceed."
-                    )
-                else:
-                    st.session_state.confirm_add = True
-                    st.rerun()
-        else:
-            # ─── Quantity‐match check ─────────────────────────────────────────
-            total_out = sum(st.session_state.out_quantities.values())
-            total_in = sum(st.session_state.in_quantities.values())
-            if total_out != total_in:
-                st.warning(
-                    f"Warning: you’re removing {total_out} card"
-                    f"{'s' if total_out!=1 else ''} but adding {total_in} "
-                    f"card{'s' if total_in!=1 else ''}. "
-                    "This will result in a library with more or less than 60 cards. Click 'Cancel' if you'd like to change this."
-                )
-
-            # finalize or cancel
-            custom_info("Click Confirm to finalize or Cancel to undo.")
-
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Confirm"):
-                    used_cards = set(st.session_state.out_quantities) | set(
-                        st.session_state.in_quantities
-                    )
-                    matchup_row = {card: "" for card in used_cards}
-                    for card, qty in st.session_state.out_quantities.items():
-                        matchup_row[card] = f"-{qty}"
-                    for card, qty in st.session_state.in_quantities.items():
-                        matchup_row[card] = f"+{qty}"
-                    matchup_row["Matchup"] = st.session_state.opponent_name
-                    st.session_state.matchups.append(matchup_row)
-                    st.success(f"Matchup '{st.session_state.opponent_name}' added!")
-                    st.session_state.clear_fields = True
-                    st.session_state.confirm_add = False
-                    st.rerun()
-            with col2:
-                if st.button("Cancel"):
-                    st.session_state.confirm_add = False
-                    st.session_state.clear_fields = True
-                    st.rerun()
-        # ───────────────────────────────────────────────────────────────────────
-
-
-def render_matrix_section(): # Renders the preview matrix and download options
+def render_matrix_section():  # Renders the preview matrix and download options
     """Step 3: Matrix preview and PNG download."""
     if not st.session_state.matchups:
         return
@@ -266,7 +360,7 @@ def render_matrix_section(): # Renders the preview matrix and download options
     st.markdown(
         """
         This section displays a sorted preview of your added matchups.
-        Click **Download options** to export the matrix as a PNG.
+        Click **Export Options** once you are finished to save your sideboard guide and/or export it to a printable file.
         """
     )
     df = pd.DataFrame(st.session_state.matchups).set_index("Matchup")
@@ -277,23 +371,26 @@ def render_matrix_section(): # Renders the preview matrix and download options
     df = df.loc[:, (df != "").any(axis=0)]
     st.dataframe(df)
 
-    if st.button("Download options"):
+    if st.button("Export Options"):
         fig = render_matrix_figure(df, st.session_state.card_labels)
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=300)
         buf.seek(0)
         st.download_button(
-            "Download matrix as PNG",
+            ".png",
             data=buf,
             file_name="sideboard-matrix.png",
             mime="image/png",
             use_container_width=True,
+            icon=":material/image:",
         )
         plt.close(fig)
 
 
 @st.cache_data(show_spinner=False)
-def render_matrix_figure(df: pd.DataFrame, card_labels: dict[str, str]) -> plt.Figure: # Renders the image that gets exported
+def render_matrix_figure(
+    df: pd.DataFrame, card_labels: dict[str, str]
+) -> plt.Figure:  # Renders the image that gets exported
     """
     Render the sideboard matrix as a matplotlib Figure, caching the result
     so it only re-draws when `df` or `card_labels` change.
@@ -375,37 +472,43 @@ def render_matrix_figure(df: pd.DataFrame, card_labels: dict[str, str]) -> plt.F
     return fig
 
 
-def render_sidebar(): # Renders the sidebar text and options
+def render_sidebar():  # Renders the sidebar text and options
     """Render sidebar links, badges, and bug-report expander."""
     st.sidebar.write(
         """
         Thanks for using **MTG Sideboarder!**
 
-        Check out the changelogs or support development:
+        Follow these links to say hello, support development, or check out the changelogs:
         """
     )
     st.sidebar.markdown(
         """
         <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
-          <a href="https://github.com/NBrichta/mtg-sideboarder" target="_blank">
-            <img src="https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white">
+          <a href="https://sideboarder.bsky.social" target="_blank">
+            <img src="https://img.shields.io/badge/Bluesky-0285FF?style=for-the-badge&logo=bluesky&logoColor=fff">
           </a>
           <a href="https://ko-fi.com/sideboarder" target="_blank">
             <img src="https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white">
+          </a>
+          <a href="https://github.com/NBrichta/mtg-sideboarder" target="_blank">
+            <img src="https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white">
           </a>
         </div>
         """,
         unsafe_allow_html=True,
     )
     st.sidebar.markdown("---")
-    with st.sidebar.expander("🐛🖥️  Submit a Bug Report"):
+    with st.sidebar.expander("🐛🖥️&emsp;Submit a Bug Report"):
         bug = st.text_area("Describe the issue:", height=150)
         incl = st.checkbox("Include session state (deck + matchups)", value=True)
         if st.button("Submit Report"):
             submit_bug_report(bug, incl)
+    st.sidebar.markdown("---")
 
 
-def submit_bug_report(bug_text, include_session): # Tells the app where to send bug reports
+def submit_bug_report(
+    bug_text, include_session
+):  # Tells the app where to send bug reports
     report_text = bug_text
     if include_session:
         report_text += f"\n---\nDeck: {st.session_state.get('deck_data')}\nMatchups: {st.session_state.get('matchups')}"
@@ -422,7 +525,7 @@ def submit_bug_report(bug_text, include_session): # Tells the app where to send 
         )
 
 
-def render_hard_reset_button(): # Renders the session reset button
+def render_hard_reset_button():  # Renders the session reset button
     st.sidebar.markdown("💔 Help, I've made a huge mistake!")
 
     if not st.session_state.get("confirm_reset", False):
@@ -442,4 +545,3 @@ def render_hard_reset_button(): # Renders the session reset button
             if st.button("Cancel", key="confirm_reset_cancel"):
                 st.session_state.confirm_reset = False
                 st.rerun()
-

@@ -11,9 +11,9 @@ The app works through a simple form-based interface which should be fairly intui
 This app does not (*and will not*) magically improve your match win percentage in a competitive setting. Sideboarding is rarely straightforward, and often depends entirely on your assessment of the metagame going into a tournament. This tool is for people who are fed-up with using clunky Excel spreadsheets, or lack the prerequisite knowledge to code/design their own sideboarding guide template.
 
 ## How do I use it?
-1. Paste in your decklist in MTGO format (e.g. 4 Lightning Bolt) into their respective mainboard and sideboard sections and submit.
+1. Paste your decklist into their respective mainboard and sideboard sections and submit.
 2. Add your matchup information, which includes the opposing deck archetype, and which cards to take out/bring in from the MB and SB respectively. Once finished, adding the matchup will spawn a preview matrix of the data entered so far.
-3. Once all matchups have been added, clicking the Download Options button will enable you to save the matrix in a templated table in PNG format, ready for printing.
+3. Once all matchups have been added, clicking the Download Options button will enable you to save the matrix in a variety of formats and sizes, ready for printing.
 
 ## Planned Features (in rough priority list)
 - Edit or delete matchups after adding

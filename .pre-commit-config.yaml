@@ -8,6 +8,8 @@ repos:
         files: ^\.streamlit/config\.toml$
       - id: check-dummy-matchups
         name: Ensure USE_DUMMY_MATCHUPS = False in sideboarder.py
-        entry: grep -qE '^ *USE_DUMMY_MATCHUPS *= *False *$' sideboarder.py
+        entry: >
+          bash -c "grep -q 'USE_DUMMY_MATCHUPS = False' sideboarder.py \
+            || (echo >&2 '⚠️  sideboarder.py must contain exactly `USE_DUMMY_MATCHUPS = False`'; exit 1)"
         language: system
         files: ^sideboarder\.py$

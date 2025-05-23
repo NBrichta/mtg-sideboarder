@@ -5,6 +5,7 @@ enableCORS         = true
 [browser]
 gatherUsageStats   = true
 
+
 [theme]
 primaryColor             = "#AF5D63"
 backgroundColor          = "#181C14"

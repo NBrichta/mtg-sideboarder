@@ -88,7 +88,7 @@ else:
         )
 
     # Reset button
-    if st.button("Reset Decklist"):
+    if st.button("Reset Decklist", type="primary"):
         st.session_state.clear()
         st.rerun()
 

@@ -10,6 +10,8 @@ dependencies:
   - io
   - re
   - hashlib
+  - json
+  - datetime
   - pip
   - pip:
     - pre-commit

@@ -6,6 +6,9 @@ import requests
 import io
 import re
 from hashlib import sha1
+import json
+from datetime import date
+from PIL import Image
 
 
 def inject_css():  # Any custom CSS gets loaded in with this function. Should be moved to a style.css when I have the time
@@ -48,25 +51,27 @@ def custom_info(  # A custom info box container for color scheme purposes. Need 
         unsafe_allow_html=True,
     )
 
+
 def splash_buttons():
-    col1, col2, col3 = st.columns([0.1,0.8,0.1])
+    col1, col2, col3 = st.columns([0.1, 0.8, 0.1])
     with col2:
         st.link_button(
-        "Generate a new sideboard guide",
-        "/create",
-        type="primary",
-        icon=":material/open_in_new:",
-        use_container_width=True,
+            "Generate a new sideboard guide",
+            "/create",
+            type="primary",
+            icon=":material/open_in_new:",
+            use_container_width=True,
         )
-    col4, col5, col6 = st.columns([0.2,0.6,0.2])
+    col4, col5, col6 = st.columns([0.2, 0.6, 0.2])
     with col5:
         st.link_button(
-            "Edit a saved sideboard guide", 
-            '/editor', 
-            type="secondary", 
-            icon=":material/edit:", 
-            use_container_width=True
+            "Edit a saved sideboard guide",
+            "/editor",
+            type="secondary",
+            icon=":material/edit:",
+            use_container_width=True,
         )
+
 
 def section_divider():  # Just makes a red underline for section headers according to current color scheme
     st.markdown(
@@ -101,7 +106,9 @@ def import_deck_from_goldfish(url: str) -> dict[str, dict[str, int]]:
     # 1. pull the numeric ID from the URL
     m = re.search(r"/deck/(\d+)", url)
     if not m:
-        st.error("❌ Couldn't parse a deck from that URL. Make sure your link contains `.../deck/[deck_id]`. ")
+        st.error(
+            "❌ Couldn't parse a deck from that URL. Make sure your link contains `.../deck/[deck_id]`. "
+        )
         return {}
     deck_id = m.group(1)
 
@@ -134,11 +141,15 @@ def import_deck_from_goldfish(url: str) -> dict[str, dict[str, int]]:
             # skip malformed lines
             continue
 
+    # ─── namespace cards so MB and SB entries never collide ─────────────────
+    deck["mainboard"] = {f"MB:{name}": cnt for name, cnt in deck["mainboard"].items()}
+    deck["sideboard"] = {f"SB:{name}": cnt for name, cnt in deck["sideboard"].items()}
+
     return deck
 
 
 def get_dummy_matchups():  # DEV MODE ONLY -> saves having to enter matchups manually to test stuff
-   
+
     # pull your actual keys out of session_state:
     mb = list(st.session_state.deck_data["mainboard"].keys())
     sb = list(st.session_state.deck_data["sideboard"].keys())
@@ -180,8 +191,8 @@ def render_deck_input_section():  # Renders the section for entering decklist te
                 "mainboard": imported["mainboard"],
                 "sideboard": imported["sideboard"],
             }
-            labels = {name: name for name in imported["mainboard"].keys()}
-            labels.update({name: name for name in imported["sideboard"].keys()})
+            labels = {key: key[3:] for key in imported["mainboard"].keys()}
+            labels.update({key: key[3:] for key in imported["sideboard"].keys()})
             st.session_state.card_labels = labels
             st.success("✅ Deck imported!")
             st.rerun()
@@ -210,7 +221,8 @@ def render_deck_input_section():  # Renders the section for entering decklist te
 
         st.session_state.deck_data = {"mainboard": mainboard, "sideboard": sideboard}
         st.session_state.card_labels = labels
-        st.toast("Decklist saved!")
+        st.success("✅ Deck saved!")
+        st.rerun()
 
 
 @st.cache_data(show_spinner=False)
@@ -371,8 +383,7 @@ def render_matchup_entry():
         # ───────────────────────────────────────────────────────────────────────
 
 
-def render_matrix_section():  # Renders the preview matrix and download options
-    """Step 3: Matrix preview and PNG download."""
+def render_matrix_section():  # Renders the download options
     if not st.session_state.matchups:
         return
     st.header("Sideboard Matrix Preview")
@@ -392,19 +403,75 @@ def render_matrix_section():  # Renders the preview matrix and download options
     st.dataframe(df)
 
     if st.button("Export Options"):
+        st.markdown("Select which format you would like to download.")
+
+        st.warning(
+            "‼️ If you would like to edit your sideboard guide at a later date, it is recommended to download a :primary[JSON file] as Sideboarder does not store any user data server-side."
+        )
+
+        # st.markdown("Select which format you would like to download.") :red[If you would like to edit your sideboard guide at a later date, it is recommended to download a JSON file as Sideboarder does not store any user data server-side.]")
+        # PNG Render
         fig = render_matrix_figure(df, st.session_state.card_labels)
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=300)
         buf.seek(0)
-        st.download_button(
-            ".png",
-            data=buf,
-            file_name="sideboard-matrix.png",
-            mime="image/png",
-            use_container_width=True,
-            icon=":material/image:",
-        )
-        plt.close(fig)
+        # PDF Render
+        card = Image.open(buf)
+        dpi = 300
+        page_w, page_h = int(8.27 * dpi), int(11.69 * dpi)
+        page = Image.new("RGB", (page_w, page_h), "white")
+        x = (page_w - card.width) // 2
+        y = (page_h - card.height) // 2
+        page.paste(card, (x, y))
+        buf_pdf = io.BytesIO()
+        page.save(buf_pdf, "PDF", resolution=dpi)
+        buf_pdf.seek(0)
+        # JSON Render
+        records = df.reset_index().to_dict(
+            orient="records"
+        )  # serialize to list of records
+        json_str = json.dumps(records, indent=2)
+        matrix_records = df.reset_index().to_dict(orient="records")
+        payload = {
+            "deck_data": st.session_state.deck_data,
+            "matrix": matrix_records
+        }
+        json_str = json.dumps(payload, indent=2)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            # JSON Download
+            st.download_button(
+                label="Save as JSON",
+                data=json_str,
+                file_name=f"sideboarder_{date.today()}.json",
+                mime="application/json",
+                use_container_width=True,
+                icon=":material/save:",
+                type="primary",
+            )
+        with col2:
+            # PNG Download
+            st.download_button(
+                "Download as PNG",
+                data=buf,
+                file_name=f"sideboarder_{date.today()}.png",
+                mime="image/png",
+                use_container_width=True,
+                icon=":material/image:",
+                type="secondary",
+            )
+        with col3:
+            st.download_button(
+                label="Print-ready PDF",
+                data=buf_pdf,
+                file_name=f"sideboarder_{date.today()}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                icon=":material/insert_drive_file:",
+                type="secondary",
+            )
+            # now we can close the figure
+            plt.close(fig)
 
 
 @st.cache_data(show_spinner=False)
@@ -432,7 +499,7 @@ def render_matrix_figure(
 
     # ─── MAGIC CARD SIZING ─────────────────────────────────────────────────
     # force the figure to Magic card dimensions: 2.5" wide × 3.5" tall
-    fig, ax = plt.subplots(figsize=(2.5, 3.5), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(3.5, 2.5), constrained_layout=True)
     ax.set_aspect("auto")
 
     name_fontsize = 5
@@ -549,7 +616,9 @@ def render_hard_reset_button():  # Renders the session reset button
     st.sidebar.markdown("")
 
     if not st.session_state.get("confirm_reset", False):
-        if st.sidebar.button("❌&emsp;:red[Reset Session Data]", key="reset_confirm_button"):
+        if st.sidebar.button(
+            "❌&emsp;:red[Reset Session Data]", key="reset_confirm_button"
+        ):
             st.session_state.confirm_reset = True
             st.rerun()
     else:

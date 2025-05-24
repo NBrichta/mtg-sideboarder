@@ -36,8 +36,7 @@ Using the PDF export feature, we can automatically scale this down to card size:
 ![pdf](https://github.com/NBrichta/mtg-sideboarder/blob/release/v1.0.0/images/readme/pdf_demo.png)
 
 ## Planned Features (in rough priority list)
-- Edit or delete matchups after adding
-    - Users should be able to customise the order they are displayed to their liking
+
 - Paste a hyperlink to a decklist for automatic importing: 
     - MTGGoldfish <- `supported as of v1.0.0`
     - Moxfield
@@ -49,4 +48,4 @@ Using the PDF export feature, we can automatically scale this down to card size:
 - Implement some form of smart abbreviation for commonly used words or phrases 
 - Colored vs. printer-friendly export options
 - Different thematic choices for export image
-- Differentiating on-the-play vs. on-the-draw (how would this even work?)
+- Differentiating on-the-play vs. on-the-draw (not entirely sure how this would look)

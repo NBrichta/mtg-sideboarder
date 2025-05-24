@@ -19,7 +19,7 @@ sb_mod.inject_css()
 # 2. Splash screen UI
 st.markdown("<h1 style='text-align:center'>SideBoarder</h1>", unsafe_allow_html=True)
 sb_mod.section_divider()
-st.markdown("<p style='text-align:center'><i>One App. Every Matchup. Total Control.</i></p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center'>Create matchup-specific sideboard guides in seconds.</p>", unsafe_allow_html=True)
 st.markdown("<div style='height:2.5rem'></div>", unsafe_allow_html=True)
 
 # Navigation buttons
@@ -44,5 +44,5 @@ st.markdown( """
         unsafe_allow_html=True,
     )
 st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center'>SideBoarder </p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center'>SideBoarder is and will forever be free-to-use.</p>", unsafe_allow_html=True)
 

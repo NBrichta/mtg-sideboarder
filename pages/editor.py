@@ -8,7 +8,9 @@ import math
 import sideboarder_modular as sb_mod
 
 # Page setup
-st.set_page_config(page_title="Edit - SideBoarder", layout="centered", page_icon="./images/icon.ico")
+st.set_page_config(
+    page_title="Edit - SideBoarder", layout="centered", page_icon="./images/icon.ico"
+)
 sb_mod.inject_css()
 sb_mod.render_sidebar()
 st.title("SideBoarder Editor")
@@ -26,12 +28,10 @@ if uploaded and "deck_data" not in st.session_state:
     try:
         data = json.load(uploaded)
         st.success("✅ File loaded successfully.")
-        st.session_state.deck_data   = data["deck_data"]
-        st.session_state.matchups    = data["matrix"]
+        st.session_state.deck_data = data["deck_data"]
+        st.session_state.matchups = data["matrix"]
         st.session_state.card_labels = {
-            key: key[3:]
-            for zone in data["deck_data"].values()
-            for key in zone
+            key: key[3:] for zone in data["deck_data"].values() for key in zone
         }
     except Exception as e:
         st.error(f"❌ Failed to parse JSON: {e}")
@@ -53,7 +53,10 @@ if st.session_state.get("matchups"):
     for idx, tab in enumerate(tabs):
         with tab:
             # Choose whether to show the original or the pending-changes version
-            if st.session_state.confirm_action == f"save_{idx}" and st.session_state.pending_changes:
+            if (
+                st.session_state.confirm_action == f"save_{idx}"
+                and st.session_state.pending_changes
+            ):
                 matchup = st.session_state.pending_changes
             else:
                 matchup = st.session_state.matchups[idx]
@@ -66,12 +69,16 @@ if st.session_state.get("matchups"):
             mb_out = {
                 k: int(str(matchup[k]).lstrip("-"))
                 for k in mb_keys
-                if k in matchup and isinstance(matchup[k], str) and matchup[k].startswith("-")
+                if k in matchup
+                and isinstance(matchup[k], str)
+                and matchup[k].startswith("-")
             }
             sb_in = {
                 k: int(str(matchup[k]).lstrip("+"))
                 for k in sb_keys
-                if k in matchup and isinstance(matchup[k], str) and matchup[k].startswith("+")
+                if k in matchup
+                and isinstance(matchup[k], str)
+                and matchup[k].startswith("+")
             }
 
             # Build a new row dict from user inputs
@@ -83,7 +90,10 @@ if st.session_state.get("matchups"):
 
             # Mainboard adjustments
             with left_col:
-                st.markdown("**<span style='color:#f7b2ad;'>Mainboard:</span>**", unsafe_allow_html=True)
+                st.markdown(
+                    "**<span style='color:#f7b2ad;'>Mainboard:</span>**",
+                    unsafe_allow_html=True,
+                )
                 for card in mb_keys:
                     if card in mb_out:
                         key = f"edit_out_{idx}_{card}"
@@ -114,7 +124,10 @@ if st.session_state.get("matchups"):
 
             # Sideboard adjustments
             with right_col:
-                st.markdown("**<span style='color:#9abca7;'>Sideboard:</span>**", unsafe_allow_html=True)
+                st.markdown(
+                    "**<span style='color:#9abca7;'>Sideboard:</span>**",
+                    unsafe_allow_html=True,
+                )
                 for card in sb_keys:
                     if card in sb_in:
                         key = f"edit_in_{idx}_{card}"
@@ -144,9 +157,13 @@ if st.session_state.get("matchups"):
                                 total_in += qty
 
             # Totals and mismatch warning
-            st.markdown(f"**Total OUT:** :red[{total_out}]   **Total IN:** :green[{total_in}]")
+            st.markdown(
+                f"**Total OUT:** :red[{total_out}]   **Total IN:** :green[{total_in}]"
+            )
             if total_out != total_in:
-                st.warning("⚠️ Number of cards being taken OUT does not match number being brought IN.")
+                st.warning(
+                    "⚠️ Number of cards being taken OUT does not match number being brought IN."
+                )
 
             # Action buttons / confirm dialogs
             confirm = st.session_state.confirm_action
@@ -160,13 +177,16 @@ if st.session_state.get("matchups"):
                     changes = []
                     # Name change?
                     if new_row["Matchup"] != original["Matchup"]:
-                        changes.append(f"🆕 Renamed '{original['Matchup']}' to '{new_row['Matchup']}'")
+                        changes.append(
+                            f"🆕 Renamed '{original['Matchup']}' to '{new_row['Matchup']}'"
+                        )
                     # Card diffs
                     all_cards = set(original.keys()).union(new_row.keys()) - {"Matchup"}
                     for card in sorted(all_cards):
                         o = original.get(card, "")
                         n = new_row.get(card, "")
-                        if isinstance(o, float) and math.isnan(o): o = ""
+                        if isinstance(o, float) and math.isnan(o):
+                            o = ""
                         if o != n:
                             old_n = int(o.lstrip("+-")) if o else 0
                             new_n = int(n.lstrip("+-")) if n else 0
@@ -179,27 +199,35 @@ if st.session_state.get("matchups"):
                         st.markdown("### Changes to Apply:")
                         for c in changes:
                             st.markdown(f"- {c}")
-                    sb_mod.custom_info("Confirm to apply these changes or cancel to continue editing.")
+                    sb_mod.custom_info(
+                        "Confirm to apply these changes or cancel to continue editing."
+                    )
                     if st.button("✅ Confirm Save", key=f"confirm_save_{idx}"):
                         st.session_state.matchups[idx] = new_row
                         # cleanup inputs
                         for k in list(st.session_state.keys()):
-                            if k.startswith(f"edit_out_{idx}_") or k.startswith(f"edit_in_{idx}_") or k.startswith(name_key):
+                            if (
+                                k.startswith(f"edit_out_{idx}_")
+                                or k.startswith(f"edit_in_{idx}_")
+                                or k.startswith(name_key)
+                            ):
                                 del st.session_state[k]
-                        st.session_state.confirm_action  = None
+                        st.session_state.confirm_action = None
                         st.session_state.pending_changes = None
                         st.rerun()
                     if st.button("❌ Cancel", key=f"cancel_save_{idx}"):
-                        st.session_state.confirm_action  = None
+                        st.session_state.confirm_action = None
                         st.session_state.pending_changes = None
                         st.rerun()
                 elif confirm == f"delete_{idx}":
                     # Hide Save during delete confirm
                     pass
                 else:
-                    if st.button(f"Save Changes to {matchup['Matchup']}", key=f"save_btn_{idx}"):
+                    if st.button(
+                        f"Save Changes to {matchup['Matchup']}", key=f"save_btn_{idx}"
+                    ):
                         st.session_state.pending_changes = new_row
-                        st.session_state.confirm_action  = f"save_{idx}"
+                        st.session_state.confirm_action = f"save_{idx}"
                         st.rerun()
 
             # — Delete path —
@@ -210,23 +238,30 @@ if st.session_state.get("matchups"):
                         deleted = st.session_state.matchups.pop(idx)
                         # cleanup inputs
                         for k in list(st.session_state.keys()):
-                            if k.startswith(f"edit_out_{idx}_") or k.startswith(f"edit_in_{idx}_") or k.startswith(name_key):
+                            if (
+                                k.startswith(f"edit_out_{idx}_")
+                                or k.startswith(f"edit_in_{idx}_")
+                                or k.startswith(name_key)
+                            ):
                                 del st.session_state[k]
                         st.toast(f"Deleted matchup: {deleted['Matchup']}")
-                        st.session_state.confirm_action   = None
+                        st.session_state.confirm_action = None
                         st.session_state.pending_deletion = None
                         st.rerun()
                     if st.button("❌ Cancel", key=f"cancel_delete_{idx}"):
-                        st.session_state.confirm_action   = None
+                        st.session_state.confirm_action = None
                         st.session_state.pending_deletion = None
                         st.rerun()
                 elif confirm == f"save_{idx}":
                     # Hide Delete during save confirm
                     pass
                 else:
-                    if st.button(f":red[Delete {matchup['Matchup']} Matchup]", key=f"delete_btn_{idx}"):
+                    if st.button(
+                        f":red[Delete {matchup['Matchup']} Matchup]",
+                        key=f"delete_btn_{idx}",
+                    ):
                         st.session_state.pending_deletion = idx
-                        st.session_state.confirm_action   = f"delete_{idx}"
+                        st.session_state.confirm_action = f"delete_{idx}"
                         st.rerun()
 
 # Export section
@@ -236,7 +271,9 @@ if st.session_state.get("matchups"):
     df = pd.DataFrame(st.session_state.matchups).set_index("Matchup")
     mb_keys = sorted(st.session_state.deck_data["mainboard"].keys())
     sb_keys = sorted(st.session_state.deck_data["sideboard"].keys())
-    columns = [c for c in mb_keys if c in df.columns] + [c for c in sb_keys if c in df.columns]
+    columns = [c for c in mb_keys if c in df.columns] + [
+        c for c in sb_keys if c in df.columns
+    ]
     df = df[columns].loc[:, (df != "").any(axis=0)]
     fig = sb_mod.render_matrix_figure(df, st.session_state.card_labels)
     buf = io.BytesIO()
@@ -255,7 +292,7 @@ if st.session_state.get("matchups"):
 
     payload = {
         "deck_data": st.session_state.deck_data,
-        "matrix": df.reset_index().to_dict(orient="records")
+        "matrix": df.reset_index().to_dict(orient="records"),
     }
     json_str = json.dumps(payload, indent=2)
 
@@ -288,5 +325,5 @@ if st.session_state.get("matchups"):
             mime="application/pdf",
             use_container_width=True,
             icon=":material/insert_drive_file:",
-            type="secondary"
+            type="secondary",
         )

@@ -12,22 +12,25 @@ st.set_page_config(
         "Get Help": "https://github.com/NBrichta/mtg-sideboarder",
         "Report a bug": "https://github.com/NBrichta/mtg-sideboarder/issues",
         "About": "MTG Sideboarder is a passion project borne out of a frustration with clunky Excel spreadsheets and a love for Magic: The Gathering. I cannot express how thankful I am to everyone who has supported its development.",
-        }
+    },
 )
 sb_mod.inject_css()
 
 # 2. Splash screen UI
 st.markdown("<h1 style='text-align:center'>SideBoarder</h1>", unsafe_allow_html=True)
 sb_mod.section_divider()
-st.markdown("<p style='text-align:center'>Create matchup-specific sideboard guides in seconds.</p>", unsafe_allow_html=True)
+st.markdown(
+    "<p style='text-align:center'>Create matchup-specific sideboard guides in seconds.</p>",
+    unsafe_allow_html=True,
+)
 st.markdown("<div style='height:2.5rem'></div>", unsafe_allow_html=True)
 
 # Navigation buttons
 sb_mod.splash_buttons()
 
 
-
-st.markdown( """
+st.markdown(
+    """
         <div style='height:2rem'></div>
         <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
           <a href="https://sideboarder.bsky.social" target="_blank">
@@ -41,8 +44,10 @@ st.markdown( """
           </a>
         </div>
         """,
-        unsafe_allow_html=True,
-    )
+    unsafe_allow_html=True,
+)
 st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center'>SideBoarder is and will forever be free-to-use.</p>", unsafe_allow_html=True)
-
+st.markdown(
+    "<p style='text-align:center'>SideBoarder is and will forever be free-to-use.</p>",
+    unsafe_allow_html=True,
+)

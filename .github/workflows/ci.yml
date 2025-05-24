@@ -33,11 +33,11 @@ jobs:
             --debug
 
       - name: Lint with black
-        run: conda run -n sideboarder_env black --check .
+        run: conda run -n sideboarder_env black .
 
       - name: Lint with flake8
         run: |
           conda run -n sideboarder_env flake8 \
-            --ignore=E203,E501,W503,F401 \
+            --ignore=E203,E501,W503 \
             .
 

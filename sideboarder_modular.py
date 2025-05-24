@@ -150,7 +150,6 @@ def import_deck_from_goldfish(url: str) -> dict[str, dict[str, int]]:
 
 
 def get_dummy_matchups():  # DEV MODE ONLY -> saves having to enter matchups manually to test stuff
-
     # pull your actual keys out of session_state:
     mb = list(st.session_state.deck_data["mainboard"].keys())
     sb = list(st.session_state.deck_data["sideboard"].keys())
@@ -433,10 +432,7 @@ def render_matrix_section():  # Renders the download options
         )  # serialize to list of records
         json_str = json.dumps(records, indent=2)
         matrix_records = df.reset_index().to_dict(orient="records")
-        payload = {
-            "deck_data": st.session_state.deck_data,
-            "matrix": matrix_records
-        }
+        payload = {"deck_data": st.session_state.deck_data, "matrix": matrix_records}
         json_str = json.dumps(payload, indent=2)
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -562,10 +558,16 @@ def render_matrix_figure(
 
 def render_sidebar():  # Renders the sidebar text and options
     """Render sidebar links, badges, and bug-report expander."""
-    st.sidebar.page_link("splash.py", label="Back to the main page", icon=":material/home:")
+    st.sidebar.page_link(
+        "splash.py", label="Back to the main page", icon=":material/home:"
+    )
     st.sidebar.markdown("---")
-    st.sidebar.page_link("pages/create.py", label="Create a new guide", icon=":material/add_circle:")
-    st.sidebar.page_link("pages/editor.py", label="Edit a saved guide", icon=":material/edit:")
+    st.sidebar.page_link(
+        "pages/create.py", label="Create a new guide", icon=":material/add_circle:"
+    )
+    st.sidebar.page_link(
+        "pages/editor.py", label="Edit a saved guide", icon=":material/edit:"
+    )
     st.sidebar.markdown("---")
     st.sidebar.write(
         """
@@ -598,7 +600,6 @@ def render_sidebar():  # Renders the sidebar text and options
         incl = st.checkbox("Include session state (deck + matchups)", value=True)
         if st.button("Submit Report"):
             submit_bug_report(bug, incl)
-
 
 
 def submit_bug_report(

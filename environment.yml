@@ -12,6 +12,8 @@ dependencies:
   - hashlib
   - json
   - datetime
+  - PIL
+  - math
   - pip
   - pip:
     - pre-commit

@@ -20,6 +20,18 @@ jobs:
           activate-environment: sideboarder_env
           auto-update-conda: true
 
+      - name: Debug conda env update
+        shell: bash
+        run: |
+          # ensure we don’t have any interactive prompts
+          conda config --set always_yes yes --set changeps1 no
+          # this will print the full solver output and conflicts
+          conda env update \
+            --name sideboarder_env \
+            --file ./environment.yml \
+            --prune \
+            --debug
+
       - name: Lint with black
         run: conda run -n sideboarder_env black --check .
 

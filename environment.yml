@@ -1,23 +1,21 @@
 name: sideboarder_env
 channels:
   - conda-forge
+  - defaults
+
 dependencies:
   - python=3.10
   - pandas
   - numpy
   - requests
   - matplotlib
-  - io
-  - re
-  - hashlib
-  - json
-  - PIL
-  - math
+  - pillow
   - pip
+
+  # PyPI-only packages
   - pip:
     - pre-commit
     - streamlit
     - pytest
     - flake8
     - black
-    - datetime

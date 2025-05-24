@@ -60,7 +60,7 @@ def splash_buttons():
             "Generate a new sideboard guide",
             "/create",
             type="primary",
-            icon=":material/open_in_new:",
+            icon=":material/add_circle:",
             use_container_width=True,
         )
     col4, col5, col6 = st.columns([0.2, 0.6, 0.2])
@@ -563,8 +563,8 @@ def render_matrix_figure(
 def render_sidebar():  # Renders the sidebar text and options
     """Render sidebar links, badges, and bug-report expander."""
     st.sidebar.page_link("splash.py", label="Back to the main page", icon=":material/home:")
-
-    st.sidebar.page_link("pages/create.py", label="Create a new guide", icon=":material/open_in_new:")
+    st.sidebar.markdown("---")
+    st.sidebar.page_link("pages/create.py", label="Create a new guide", icon=":material/add_circle:")
     st.sidebar.page_link("pages/editor.py", label="Edit a saved guide", icon=":material/edit:")
     st.sidebar.markdown("---")
     st.sidebar.write(

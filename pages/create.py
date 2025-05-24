@@ -7,7 +7,7 @@ import sideboarder_modular as sb_mod
 
 # Set page config (MUST BE FIRST)
 st.set_page_config(
-    page_title="Create - MTG Sideboarder",
+    page_title="Create - SideBoarder",
     page_icon="./images/icon.ico",
     layout="centered",
     initial_sidebar_state="auto",
@@ -22,7 +22,7 @@ USE_DUMMY_MATCHUPS = False  # Inputs matchup_data automatically to save developm
 
 # Inject custom CSS and set up page header
 sb_mod.inject_css()
-st.title("Sideboard Guide Generator")
+st.title("SideBoarder Generator")
 st.markdown(
     """
     Generate a new sideboard guide by following the steps below:
@@ -89,7 +89,7 @@ else:
         )
 
     # Reset button
-    if st.button("Reset Decklist", type="primary"):
+    if st.button(":red[Reset Decklist]"):
         st.session_state.clear()
         st.rerun()
 

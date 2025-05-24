@@ -8,10 +8,16 @@ import math
 import sideboarder_modular as sb_mod
 
 # Page setup
-st.set_page_config(page_title="Edit Sideboard Guide", layout="centered")
+st.set_page_config(page_title="Edit - SideBoarder", layout="centered", page_icon="./images/icon.ico")
 sb_mod.inject_css()
 sb_mod.render_sidebar()
-st.title("Edit a Saved Sideboard Guide")
+st.title("SideBoarder Editor")
+st.markdown(
+    """
+    Edit your sideboard guide by following the steps below:
+    """
+)
+st.header("Upload Data")
 sb_mod.section_divider()
 
 # Upload JSON (only load into session_state once)
@@ -261,6 +267,8 @@ if st.session_state.get("matchups"):
             file_name=f"sideboarder_{date.today()}.json",
             mime="application/json",
             use_container_width=True,
+            icon=":material/save:",
+            type="primary",
         )
     with col2:
         st.download_button(
@@ -269,6 +277,8 @@ if st.session_state.get("matchups"):
             file_name=f"sideboarder_{date.today()}.png",
             mime="image/png",
             use_container_width=True,
+            icon=":material/image:",
+            type="secondary",
         )
     with col3:
         st.download_button(
@@ -277,4 +287,6 @@ if st.session_state.get("matchups"):
             file_name=f"sideboarder_{date.today()}.pdf",
             mime="application/pdf",
             use_container_width=True,
+            icon=":material/insert_drive_file:",
+            type="secondary"
         )

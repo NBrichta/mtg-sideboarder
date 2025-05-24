@@ -4,7 +4,7 @@ import sideboarder_modular as sb_mod
 
 # 1. Configure the main page
 st.set_page_config(
-    page_title="Sideboarder - MTG Sideboard Guide Creator",
+    page_title="Home - SideBoarder",
     page_icon="./images/icon.ico",
     layout="centered",
     initial_sidebar_state="collapsed",
@@ -19,8 +19,7 @@ sb_mod.inject_css()
 # 2. Splash screen UI
 st.markdown("<h1 style='text-align:center'>SideBoarder</h1>", unsafe_allow_html=True)
 sb_mod.section_divider()
-st.markdown("<p style='text-align:center'>A lightweight UI for designing and exporting Magic: The Gathering sideboard guides.</p>", unsafe_allow_html=True)
-
+st.markdown("<p style='text-align:center'><i>One App. Every Matchup. Total Control.</i></p>", unsafe_allow_html=True)
 st.markdown("<div style='height:2.5rem'></div>", unsafe_allow_html=True)
 
 # Navigation buttons
@@ -45,5 +44,5 @@ st.markdown( """
         unsafe_allow_html=True,
     )
 st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center'>SideBoarder is built with Python 3.1 and Streamlit 1.45.0</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center'>SideBoarder </p>", unsafe_allow_html=True)
 

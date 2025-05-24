@@ -1,3 +1,4 @@
+# sideboarder_modular.py = sb_mod
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -561,13 +562,19 @@ def render_matrix_figure(
 
 def render_sidebar():  # Renders the sidebar text and options
     """Render sidebar links, badges, and bug-report expander."""
+    st.sidebar.page_link("splash.py", label="Back to the main page", icon=":material/home:")
+
+    st.sidebar.page_link("pages/create.py", label="Create a new guide", icon=":material/open_in_new:")
+    st.sidebar.page_link("pages/editor.py", label="Edit a saved guide", icon=":material/edit:")
+    st.sidebar.markdown("---")
     st.sidebar.write(
         """
-        Thanks for using **MTG Sideboarder!**
+        Thanks for using **SideBoarder!**
 
         Follow these links to say hello, support development, or check out the changelogs:
         """
     )
+    st.sidebar.markdown("<div style='height:3rem'></div>", unsafe_allow_html=True)
     st.sidebar.markdown(
         """
         <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
@@ -584,13 +591,14 @@ def render_sidebar():  # Renders the sidebar text and options
         """,
         unsafe_allow_html=True,
     )
+    st.sidebar.markdown("<div style='height:3rem'></div>", unsafe_allow_html=True)
     st.sidebar.markdown("---")
     with st.sidebar.expander("👾&emsp;Submit a Bug Report"):
         bug = st.text_area("Describe the issue:", height=150)
         incl = st.checkbox("Include session state (deck + matchups)", value=True)
         if st.button("Submit Report"):
             submit_bug_report(bug, incl)
-    st.sidebar.markdown("---")
+
 
 
 def submit_bug_report(

@@ -1,4 +1,4 @@
-# Magic: The Gathering Sideboarder
+# SideBoarder
 A lightweight web app for designing and exporting Magic: The Gathering sideboard guides.
 Built using Python 3.1 and Streamlit 1.45.0.
 

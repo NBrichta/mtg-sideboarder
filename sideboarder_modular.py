@@ -275,8 +275,6 @@ def render_matchup_entry():
     if not st.session_state.get("deck_data"):
         return
 
-
-
     # Ensure our temporary keys exist
     st.session_state.setdefault("tmp_opponent_name", "")
     st.session_state.setdefault("tmp_search_out", [])
@@ -518,11 +516,7 @@ def render_matrix_figure(
     for i in range(matrix.shape[0]):
         for j in range(matrix.shape[1]):
             if matrix[i, j]:
-                ax.add_patch(
-                    plt.Rectangle(
-                        (j, i), 1, 1, color=color_m[i, j]
-                    )
-                )
+                ax.add_patch(plt.Rectangle((j, i), 1, 1, color=color_m[i, j]))
                 ax.text(
                     j + 0.5,
                     i + 0.5,
@@ -554,7 +548,7 @@ def render_matrix_figure(
     for s in ax.spines.values():
         s.set_visible(True)
     # flip so the “first” row is at the top
-    #ax.invert_yaxis()
+    # ax.invert_yaxis()
 
     # ─── add a thin black border around the *whole* image ───────────────
     fig.patch.set_edgecolor("black")
@@ -643,6 +637,7 @@ def download_sample_json():
         file_name="sample_data.json",
         mime="application/json",
     )
+
 
 def render_hard_reset_button():  # Renders the session reset button
     st.sidebar.markdown("")

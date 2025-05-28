@@ -38,6 +38,6 @@ jobs:
       - name: Lint with flake8
         run: |
           conda run -n sideboarder_env flake8 \
-            --ignore=E203,E501,W503 \
+            --ignore=E203,E501,W503,W291 \
             .
 

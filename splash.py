@@ -53,11 +53,13 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-col1, col2, col3 = st.columns([0.1,0.8,0.1])
+col1, col2, col3 = st.columns([0.1, 0.8, 0.1])
 
 with col2:
-  st.subheader("Changelog")
-  sb_mod.section_divider()
-  st.markdown("""
+    st.subheader("Changelog")
+    sb_mod.section_divider()
+    st.markdown(
+        """
     - `v1.0.0` Initial release.
-  """)
+  """
+    )

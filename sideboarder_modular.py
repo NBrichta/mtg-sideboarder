@@ -72,6 +72,15 @@ def splash_buttons():
             icon=":material/edit:",
             use_container_width=True,
         )
+    col7, col8, col9 = st.columns([0.3, 0.4, 0.3])
+    with col8:
+        st.link_button(
+            "Tutorial",
+            "/tutorial",
+            type="tertiary",
+            icon=":material/help:",
+            use_container_width=True,
+        )
 
 
 def section_divider():  # Just makes a red underline for section headers according to current color scheme
@@ -149,23 +158,23 @@ def import_deck_from_goldfish(url: str) -> dict[str, dict[str, int]]:
     return deck
 
 
-def get_dummy_matchups():  # DEV MODE ONLY -> saves having to enter matchups manually to test stuff
-    # pull your actual keys out of session_state:
-    mb = list(st.session_state.deck_data["mainboard"].keys())
-    sb = list(st.session_state.deck_data["sideboard"].keys())
-    return [
-        {mb[0]: "-2", sb[0]: "+2", "Matchup": "Mono-Green Stompy"},
-        {mb[1]: "-1", sb[1]: "+1", "Matchup": "Burn"},
-        {mb[2]: "-2", sb[5]: "+2", "Matchup": "Blue Tempo"},  # re-uses sb[0]
-        {mb[3]: "-1", sb[2]: "+1", "Matchup": "Gruul Midrange"},
-        {mb[0]: "-3", sb[3]: "+3", "Matchup": "Tron Lands"},  # re-uses mb[0]
-        {mb[4]: "-2", sb[4]: "+2", "Matchup": "UW Control"},
-        {mb[1]: "-2", sb[2]: "+2", "Matchup": "Jund"},  # re-uses sb[2]
-        {mb[2]: "-1", sb[1]: "+1", "Matchup": "Affinity"},  # re-uses sb[1]
-        {mb[7]: "-2", sb[4]: "+2", "Matchup": "UW Control"},
-        {mb[1]: "-2", sb[2]: "+2", "Matchup": "Jund"},  # re-uses sb[2]
-        {mb[2]: "-1", sb[1]: "+1", "Matchup": "Affinity"},  # re-uses sb[1]
-    ]
+# def get_dummy_matchups():  # DEV MODE ONLY -> saves having to enter matchups manually to test stuff
+#     # pull your actual keys out of session_state:
+#     mb = list(st.session_state.deck_data["mainboard"].keys())
+#     sb = list(st.session_state.deck_data["sideboard"].keys())
+#     return [
+#         {mb[0]: "-2", sb[0]: "+2", "Matchup": "Mono-Green Stompy"},
+#         {mb[1]: "-1", sb[1]: "+1", "Matchup": "Burn"},
+#         {mb[2]: "-2", sb[5]: "+2", "Matchup": "Blue Tempo"},  # re-uses sb[0]
+#         {mb[3]: "-1", sb[2]: "+1", "Matchup": "Gruul Midrange"},
+#         {mb[0]: "-3", sb[3]: "+3", "Matchup": "Tron Lands"},  # re-uses mb[0]
+#         {mb[4]: "-2", sb[4]: "+2", "Matchup": "UW Control"},
+#         {mb[1]: "-2", sb[2]: "+2", "Matchup": "Jund"},  # re-uses sb[2]
+#         {mb[2]: "-1", sb[1]: "+1", "Matchup": "Affinity"},  # re-uses sb[1]
+#         {mb[7]: "-2", sb[4]: "+2", "Matchup": "UW Control"},
+#         {mb[1]: "-2", sb[2]: "+2", "Matchup": "Jund"},  # re-uses sb[2]
+#         {mb[2]: "-1", sb[1]: "+1", "Matchup": "Affinity"},  # re-uses sb[1]
+#     ]
 
 
 def render_deck_input_section():  # Renders the section for entering decklist text
@@ -266,8 +275,7 @@ def render_matchup_entry():
     if not st.session_state.get("deck_data"):
         return
 
-    st.header("Add Matchup Info")
-    section_divider()
+
 
     # Ensure our temporary keys exist
     st.session_state.setdefault("tmp_opponent_name", "")
@@ -512,12 +520,12 @@ def render_matrix_figure(
             if matrix[i, j]:
                 ax.add_patch(
                     plt.Rectangle(
-                        (j, matrix.shape[0] - i - 1), 1, 1, color=color_m[i, j]
+                        (j, i), 1, 1, color=color_m[i, j]
                     )
                 )
                 ax.text(
                     j + 0.5,
-                    matrix.shape[0] - i - 0.5,
+                    i + 0.5,
                     matrix[i, j],
                     ha="center",
                     va="center",
@@ -546,7 +554,7 @@ def render_matrix_figure(
     for s in ax.spines.values():
         s.set_visible(True)
     # flip so the “first” row is at the top
-    # ax.invert_yaxis()
+    #ax.invert_yaxis()
 
     # ─── add a thin black border around the *whole* image ───────────────
     fig.patch.set_edgecolor("black")
@@ -558,17 +566,20 @@ def render_matrix_figure(
 
 def render_sidebar():  # Renders the sidebar text and options
     """Render sidebar links, badges, and bug-report expander."""
+    st.sidebar.page_link("splash.py", label="Main page", icon=":material/home:")
     st.sidebar.page_link(
-        "splash.py", label="Back to the main page", icon=":material/home:"
+        "pages/tutorial.py", label="How to use this app", icon=":material/help:"
     )
-    st.sidebar.markdown("---")
+    with st.sidebar:
+        section_divider()
     st.sidebar.page_link(
         "pages/create.py", label="Create a new guide", icon=":material/add_circle:"
     )
     st.sidebar.page_link(
         "pages/editor.py", label="Edit a saved guide", icon=":material/edit:"
     )
-    st.sidebar.markdown("---")
+    with st.sidebar:
+        section_divider()
     st.sidebar.write(
         """
         Thanks for using **SideBoarder!**
@@ -576,7 +587,7 @@ def render_sidebar():  # Renders the sidebar text and options
         Follow these links to say hello, support development, or check out the changelogs:
         """
     )
-    st.sidebar.markdown("<div style='height:3rem'></div>", unsafe_allow_html=True)
+    st.sidebar.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
     st.sidebar.markdown(
         """
         <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
@@ -593,8 +604,9 @@ def render_sidebar():  # Renders the sidebar text and options
         """,
         unsafe_allow_html=True,
     )
-    st.sidebar.markdown("<div style='height:3rem'></div>", unsafe_allow_html=True)
-    st.sidebar.markdown("---")
+    st.sidebar.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+    with st.sidebar:
+        section_divider()
     with st.sidebar.expander("👾&emsp;Submit a Bug Report"):
         bug = st.text_area("Describe the issue:", height=150)
         incl = st.checkbox("Include session state (deck + matchups)", value=True)
@@ -620,6 +632,17 @@ def submit_bug_report(
             f"Failed to submit bug report: {e}. Please create an issue on [GitHub](https://github.com/NBrichta/mtg-sideboarder) and I'll try to address it as soon as I can."
         )
 
+
+def download_sample_json():
+    with open("./static/blast_cutter.json", "r", encoding="utf-8") as f:
+        raw_text = f.read()
+
+    st.download_button(
+        label="Download sample_data.json",
+        data=raw_text,
+        file_name="sample_data.json",
+        mime="application/json",
+    )
 
 def render_hard_reset_button():  # Renders the session reset button
     st.sidebar.markdown("")

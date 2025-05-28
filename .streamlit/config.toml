@@ -3,6 +3,7 @@ headless = true
 enableCORS = true
 enableXsrfProtection = true
 maxUploadSize = 1
+staticDir = "static"
 
 [browser]
 gatherUsageStats = true

@@ -10,7 +10,7 @@ st.set_page_config(
     layout="centered",
     initial_sidebar_state="auto",
     menu_items={
-        "Get Help": "https://github.com/NBrichta/mtg-sideboarder",
+        "Get Help": "mailto:sideboarder.dev@gmail.com",
         "Report a bug": "https://github.com/NBrichta/mtg-sideboarder/issues",
         "About": "MTG Sideboarder is a passion project borne out of a frustration with clunky Excel spreadsheets and a love for Magic: The Gathering. I cannot express how thankful I am to everyone who has supported its development.",
     },
@@ -99,6 +99,8 @@ if st.session_state.deck_data:
     ):  # could probably nest this within sb_mod.render_matchup_entry(), but who cares
         st.session_state.matchups = sb_mod.get_dummy_matchups()
     else:
+        st.header("Add Matchup Info")
+        sb_mod.section_divider()
         sb_mod.render_matchup_entry()
 
 # Step 3: Matrix preview & download

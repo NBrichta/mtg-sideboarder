@@ -60,6 +60,7 @@ with col2:
     sb_mod.section_divider()
     st.markdown(
         """
+    - `v1.0.1` Fixed major bug that would invert PNG/PDF output on save.
     - `v1.0.0` Initial release.
   """
     )

@@ -98,13 +98,13 @@ with tab2:  # Export Formats
         st.subheader("PNG")
         sb_mod.section_divider()
         "The `PNG` format exports as a table at 300dpi. This makes it suitable for uploading to social media platforms, as well as copy/pasting into blank documents for printing at any size. An example of the exported sideboard guide using the sample_data.json file is shown here:"
-        st.image(".images/readme/sideboard_demo.png", use_container_width=True)
+        st.image("./images/readme/sideboard_demo.png", use_container_width=True)
 
     with col3:
         st.subheader("PDF")
         sb_mod.section_divider()
         "The `PDF` export option allows you to export your sideboard guide into a pretemplated, card-sized cutout ready for printing. Note that the image below is shrunk significantly to contain it on the page, and the true size is roughly 2.5 x 3.5in, roughly the size of a Magic card."
-        st.image(".images/readme/pdf_demo.png", use_container_width=True)
+        st.image("./images/readme/pdf_demo.png", use_container_width=True)
 
 
 
